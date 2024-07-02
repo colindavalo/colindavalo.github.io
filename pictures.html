@@ -1,0 +1,121 @@
+<html>
+<!DOCTYPE html>
+<html lang="en">
+    <meta charset="UTF-8">
+    <meta name="author" content="Colin Davalo" >
+    <meta name="viewport" content="widt=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <style>
+        body, h1, h2, h3, h4, h5, h6  {
+          font-family: Arial, Helvetica, sans-serif ;
+        }
+          .container {
+  display: flex;
+  align-items: center;
+  justify-content: center
+}
+
+img {
+  max-width: 100%;
+  max-height:100%;
+}
+
+.text {
+  font-size: 10px;
+  padding-left: 20px;
+}
+    </style>
+	<head>
+		<title>Colin DAVALO's personal page</title>
+		<meta name="google-site-verification" content="uwOAisFObdgDQmT0rIbTZgNEnUb6Upu82o8hFJo4LJA" />
+		<meta charset="utf-8" />
+		<link rel="stylesheet" href="style.css" />
+		<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    	<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+	</head>
+
+<body>
+<div class="w3-top">
+		<div class="w3-bar w3-white w3-card">
+			<a href="index.html" class="w3-bar-item w3-button w3-padding-16">Home</a>
+			<a href="pictures.html" class="w3-bar-item w3-button w3-padding-16">Pictures</a>
+			<div class="w3-right">
+			<div class="w3-dropdown-hover">
+			   <button class="w3-button w3-padding-16">English</button>
+				<div class="w3-dropdown-content w3-bar-block w3-card-4">
+				<a href="indexfr.html" class="w3-bar-item w3-button">Francais</a>
+				</div>
+				</div>
+			</div>
+		</div>
+	</div>
+<div id="home" class="w3-auto w3-padding-64">
+<div class="w3-center">
+
+<p>
+	<h2>Illustrations of projective structures associated to maximal representations into the Lie group \(\text{Sp}(4,\mathbb{R})\).</h2></p>
+	<p><i>You can click on the 3D pictures to move the veiwpoint around.</i>
+</p>
+
+
+	
+
+  <h4> Regular octogon of hyperboloids</h4>
+<p>
+
+	We first consider a simple maximal representation. We consider a Fuchsian representation of the fundamental group of a surface of genus \(2\) into \(\text{SL}(2,\mathbb{R})\) that identifies the sides of a regular hyperbolic octogon with angles \(\pi/4\).
+	We then embed reducibly this representation via the diagonal reducible representation of \(\text{SL}(2,\mathbb{R})\) into \(\text{Sp}(4,\mathbb{R})\).  
+	The representation we obtain is maximal, and preserves a domain of discontinuity in \(\mathbb{RP}^3\).
+<div class="image">
+	<a href="pictures/Octogon reducible and DoD.html">	
+		<img src="pictures/OctogonDoDReducible.png" height="230" border="0" width="270" />
+	</a>
+</div>
+
+The domain of discontinuity in this case is the complement of the black hyperboloid. This domain has two connected components.
+A fundamental domain for the action of our representation is obtained by removing the interior of the \(8\) colored hyperboloids.
+This fundamental domain can be constructed both as the boundary of a <a href="https://arxiv.org/abs/2402.06408"> Dirichlet-Selberg domain </a>, or by using quadrics attached to the limit map.
+
+</p>
+
+<h4> Hexagon of hyperboloids</h4>
+<p>
+
+	We now consider any Fuchsian representation of the fundamental group of a surface of genus \(g\geq 2\) into \(\text{SL}(2,\mathbb{R})\), and we still embed reducibly this representation via the diagonal reducible representation of \(\text{SL}(2,\mathbb{R})\) into \(\text{Sp}(4,\mathbb{R})\).  
+	The representation we obtain is maximal, and preserves a domain of discontinuity in \(\mathbb{RP}^3\). We decompose the surface into hexagons by cutting along simple closed curves.
+	The domain of discpontinuity can be decomposed into Hexagons of hyperboloids <a href="Archives pdf/main.pdf#page=170">using quadrics attached to the limit map of the representation</a>.
+<div class="image">
+	<a href="pictures/Hexagon reducible.html">	
+		<img src="pictures/HexagonReducible.png" height="230" border="0" width="270" />
+	</a>
+</div>
+
+Now if we compose a Fuchsian representation by the irreducible representation of \(\text{SL}(2,\mathbb{R})\) into \(\text{Sp}(4,\mathbb{R})\), we obtain a Hitchin representation. 
+Hitchin representations are maximal, hence this representation admits domain of discontinuity in projective space tiled by hexagons of hyperboloids. Here is an illustration of an hexagon one can obtain.
+
+<div class="image">
+	<a href="pictures/Hexagon irreducible.html">	
+		<img src="pictures/HexagonIrreducible.png" height="230" border="0" width="270" />
+	</a>
+</div>
+
+Note that here the intersection of two intersecting quadrics is topologically the union of two circles, but not necessarily two projective lines, in contrast with the reducible case.
+
+</p>
+
+<h4> Ideal triangle of hyperboloids</h4>
+<p>
+	Given any maximal representation of a surface group and given any maximal lamination of the surface, the domain of discontinuity can always be decomposed into ideal triangles of hyperboloids, or ideal triangles of Photons, <a href="https://arxiv.org/pdf/2206.06946#page=170">(see the work of Mazzoli and Viaggi)</a>.
+All these triangles of hyperboloids are equal to the following one, up the the action of \(\text{PSp}(4,\mathbb{R})\simeq \text{SO}_o(2,3)\).
+	<div class="image">
+	<a href="pictures/Ideal triangle.html">	
+		<img src="pictures/IdealTriangle.png" height="230" border="0" width="270" />
+	</a>
+</div>
+
+</p>
+
+<p>
+
+These domains bounded by hyperboloids were studued for representations of free groups by <a href="https://arxiv.org/abs/1609.04560"> Burelle and Treib</a>, here is a <a href="https://arxiv.org/pdf/1609.04560#page=16">picture</a>.
+</p>
