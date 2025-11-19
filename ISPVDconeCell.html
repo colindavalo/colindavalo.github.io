@@ -4,7 +4,13 @@
     <meta charset="UTF-8">
     <title>Poisson Voronoi - Cell of A0</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #f5f5f5; font-family: sans-serif; }
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #f5f5f5;
+            font-family: sans-serif;
+        }
+
         #info {
             position: absolute;
             top: 10px;
@@ -18,379 +24,459 @@
             pointer-events: auto;
             z-index: 10;
         }
-        .control-group { margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
-        .control-group label { font-weight: bold; font-size: 13px; }
-        .control-group input { width: 70px; padding: 4px; border: 1px solid #ccc; border-radius: 4px; }
-        
-        button {
-            background-color: #4682B4; color: white; border: none; width: 100%;
-            padding: 8px; border-radius: 4px; cursor: pointer; font-size: 13px; margin-top: 5px;
-        }
-        button:hover { background-color: #3a6d99; }
-        
-        button.secondary { background-color: #2E8B57; margin-top: 5px;}
-        button.secondary:hover { background-color: #256f45; }
 
-        #loading { display: none; font-size: 0.8em; color: #666; text-align: center; margin-top:8px; font-weight: bold;}
-        .stats { font-size: 0.75em; color: #888; text-align: center; margin-top: 5px;}
+        .control-group {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+            .control-group label {
+                font-weight: bold;
+                font-size: 13px;
+            }
+
+            .control-group input {
+                width: 70px;
+                padding: 4px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+            }
+
+        button {
+            background-color: #4682B4;
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            margin-top: 5px;
+        }
+
+            button:hover {
+                background-color: #3a6d99;
+            }
+
+            button.secondary {
+                background-color: #2E8B57;
+                margin-top: 5px;
+            }
+
+                button.secondary:hover {
+                    background-color: #256f45;
+                }
+
+        #loading {
+            display: none;
+            font-size: 0.8em;
+            color: #666;
+            text-align: center;
+            margin-top: 8px;
+            font-weight: bold;
+        }
+
+        .stats {
+            font-size: 0.75em;
+            color: #888;
+            text-align: center;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
 
-<div id="info">
-    <h3>Ideal Selberg Poisson Voronoi diagrams in SL(3,R)</h3>
-    <p style="font-size:0.85em; color:#555;">
-        Visualizing the cell of the fixed horofunction A<sub>0</sub> (centered at the cone tip).
-        Only the faces separating A<sub>0</sub> from other matrices are drawn.
-    </p>
-    
-    <div class="control-group">
-        <label for="nInput">N (Sample Size):</label>
-        <input type="number" id="nInput" value="500" min="10" max="20000" step="10">
+    <div id="info">
+        <h3>Ideal Selberg Poisson Voronoi</h3>
+        <p style="font-size:0.85em; color:#555;">
+            <strong>Process:</strong> Points sampled in box [0,N]x[0,N].<br>
+            <strong>Count:</strong> Poisson(&lambda; = N<sup>2</sup>).<br>
+            Visualizing the cell of A<sub>0</sub>.
+        </p>
+
+        <div class="control-group">
+            <label for="nInput">Side N of Box:</label>
+            <input type="number" id="nInput" value="30" min="5" max="300" step="1">
+        </div>
+
+        <button id="btnResample">Generate (Resample)</button>
+
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
+
+        <button class="secondary" id="btnSaveImage">Save Image (PNG)</button>
+        <button class="secondary" id="btnSaveHTML">Save 3D Scene (HTML)</button>
+
+        <div id="loading">Calculating...</div>
+        <div class="stats" id="statsOutput">Faces: 0 | Total Points: 0</div>
     </div>
 
-    <button id="btnResample">Generate (Resample)</button>
-    
-    <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
-    
-    <button class="secondary" id="btnSaveImage">Save Image (PNG)</button>
-    <button class="secondary" id="btnSaveHTML">Save 3D Scene (HTML)</button>
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+          }
+        }
+    </script>
 
-    <div id="loading">Calculating...</div>
-    <div class="stats" id="statsOutput">Faces: 0</div>
-</div>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-<script type="importmap">
-  {
-    "imports": {
-      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-    }
-  }
-</script>
+        // --- 1. Scene Setup ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf5f5f5);
 
-<script type="module">
-    import * as THREE from 'three';
-    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 100);
+        camera.position.set(1.8, 1.5, 2.5);
 
-    // --- 1. Scene Setup ---
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xf5f5f5);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.body.appendChild(renderer.domElement);
 
-    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 100);
-    camera.position.set(1.8, 1.5, 2.5);
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    document.body.appendChild(renderer.domElement);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        dirLight.position.set(10, 20, 10);
+        scene.add(dirLight);
 
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
+        // --- 2. Visual Environment ---
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
-    dirLight.position.set(10, 20, 10);
-    scene.add(dirLight);
+        const coneGeom = new THREE.ConeGeometry(0.5, 0.5, 64, 1, true);
+        coneGeom.rotateX(Math.PI);
+        coneGeom.translate(0, 0.25, 0);
+        const coneMat = new THREE.MeshPhongMaterial({
+        color: 0xaaaaaa, transparent: true, opacity: 0.05,
+        side: THREE.DoubleSide, depthWrite: false
+        });
+        scene.add(new THREE.Mesh(coneGeom, coneMat));
 
-    // --- 2. Visual Environment ---
-    
-    const coneGeom = new THREE.ConeGeometry(0.5, 0.5, 64, 1, true);
-    coneGeom.rotateX(Math.PI); 
-    coneGeom.translate(0, 0.25, 0);
-    const coneMat = new THREE.MeshPhongMaterial({
-        color: 0xaaaaaa, transparent: true, opacity: 0.05, 
-        side: THREE.DoubleSide, depthWrite: false 
-    });
-    scene.add(new THREE.Mesh(coneGeom, coneMat));
+        // --- 3. Math & Matrix Logic ---
 
-    // Removed Ring Geometry as requested
-
-    // --- 3. Math & Matrix Logic ---
-
-    function getRandomOrthogonal() {
+        function getRandomOrthogonal() {
         const v1 = new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, Math.random()-0.5).normalize();
         let v2 = new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, Math.random()-0.5);
         v2.sub(v1.clone().multiplyScalar(v1.dot(v2))).normalize();
         const v3 = new THREE.Vector3().crossVectors(v1, v2).normalize();
         return [v1, v2, v3];
-    }
+        }
 
-    function getTraceCoeffsFromEigen(lam1, lam2, lam3, basis) {
+        function getTraceCoeffsFromEigen(lam1, lam2, lam3, basis) {
         const u = basis[0], v = basis[1], w = basis[2];
-        
+
         const a11 = lam1*u.x*u.x + lam2*v.x*v.x + lam3*w.x*w.x;
         const a22 = lam1*u.y*u.y + lam2*v.y*v.y + lam3*w.y*w.y;
         const a33 = lam1*u.z*u.z + lam2*v.z*v.z + lam3*w.z*w.z;
         const a12 = lam1*u.x*u.y + lam2*v.x*v.y + lam3*w.x*w.y;
 
         return new THREE.Vector4(
-            a11 - a22,              
-            a11 + a22 - 2 * a33,    
-            2 * a12,                
-            a33                     
+        a11 - a22,
+        a11 + a22 - 2 * a33,
+        2 * a12,
+        a33
         );
-    }
+        }
 
-    // --- 4. Core Logic ---
+        // --- 4. Core Logic ---
 
-    let allCoeffs = [];
-    let wallMeshes = [];
-    const visGroup = new THREE.Group();
-    scene.add(visGroup);
+        let allCoeffs = [];
+        let wallMeshes = [];
+        const visGroup = new THREE.Group();
+        scene.add(visGroup);
 
-    function generateData(nValue) {
+        function generateData(sideLength) {
         allCoeffs = [];
-        // A0 = Diag(1, 1, 0) -> Coeffs(0, 2, 0, 0)
+        // 1. Add A0 = Diag(1, 1, 0)
         allCoeffs.push(new THREE.Vector4(0, 2, 0, 0));
 
-        const Range = 10.0;
-        for (let i = 0; i < nValue; i++) {
-            const x = Math.random() * Range;
-            const y = Math.random() * Range;
-            const O = getRandomOrthogonal();
-            allCoeffs.push(getTraceCoeffsFromEigen(x, y, 0, O));
-        }
-    }
+        // 2. Poisson Process
+        // Intensity (Mean count) = Area = sideLength^2
+        const lambda = sideLength * sideLength;
 
-    function buildVoronoi() {
+        // Generate Poisson variable K ~ Poisson(lambda)
+        // For large lambda, we approximate with Normal distribution: N(lambda, sqrt(lambda))
+        // Box-Muller transform
+        const u1 = Math.random();
+        const u2 = Math.random();
+        const z = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+
+        let count = Math.round(lambda + Math.sqrt(lambda) * z);
+        if (count < 0) count = 0;
+
+        // 3. Generate Points
+        for (let i = 0; i < count; i++) {
+        // Uniform distribution in [0, sideLength] x [0, sideLength]
+        const x = Math.random() * sideLength;
+        const y = Math.random() * sideLength;
+        const O = getRandomOrthogonal();
+        allCoeffs.push(getTraceCoeffsFromEigen(x, y, 0, O));
+        }
+        }
+
+        function buildVoronoi() {
         // Cleanup
         wallMeshes.forEach(m => {
-            m.geometry.dispose();
-            m.material.dispose();
-            visGroup.remove(m);
+        m.geometry.dispose();
+        m.material.dispose();
+        visGroup.remove(m);
         });
         wallMeshes = [];
 
         const count = allCoeffs.length;
 
-        // Data Texture Setup
-        const dataArray = new Float32Array(count * 4);
+        // Safety check for extremely high N
+        // WebGL textures have limits, usually 4096 or 8192 or 16384 px width.
+        // If count > 16384, we might need a 2D texture (NxN) instead of 1D (Nx1).
+        // Here we assume count fits in max texture size (usually 16k on modern GPUs).
+        // If sideLength=200 => count=40000. This requires a texture split or 2D texture.
+        // Let's switch to a square texture to be safe for high counts.
+
+        const texSize = Math.ceil(Math.sqrt(count));
+        const dataArray = new Float32Array(texSize * texSize * 4);
+
         for(let i=0; i<count; i++) {
-            dataArray[i*4+0] = allCoeffs[i].x;
-            dataArray[i*4+1] = allCoeffs[i].y;
-            dataArray[i*4+2] = allCoeffs[i].z;
-            dataArray[i*4+3] = allCoeffs[i].w;
+        dataArray[i*4+0] = allCoeffs[i].x;
+        dataArray[i*4+1] = allCoeffs[i].y;
+        dataArray[i*4+2] = allCoeffs[i].z;
+        dataArray[i*4+3] = allCoeffs[i].w;
         }
-        
-        const dataTexture = new THREE.DataTexture(dataArray, count, 1, THREE.RGBAFormat, THREE.FloatType);
+
+        // DataTexture needs to be filled
+        const dataTexture = new THREE.DataTexture(dataArray, texSize, texSize, THREE.RGBAFormat, THREE.FloatType);
         dataTexture.minFilter = THREE.NearestFilter;
         dataTexture.magFilter = THREE.NearestFilter;
         dataTexture.needsUpdate = true;
 
         const vertexShader = `
-            varying vec3 vPos;
-            varying vec3 vNormal;
-            void main() {
-                vPos = (modelMatrix * vec4(position, 1.0)).xyz;
-                vNormal = normalize(normalMatrix * normal);
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            }
+        varying vec3 vPos;
+        varying vec3 vNormal;
+        void main() {
+        vPos = (modelMatrix * vec4(position, 1.0)).xyz;
+        vNormal = normalize(normalMatrix * normal);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
         `;
 
+        // Injecting the exact loop limit into the shader
         const fragmentShader = `
-            uniform sampler2D uDataTexture;
-            uniform int uTotal;
-            uniform int uIdxA;
-            uniform int uIdxB;
-            uniform vec3 uColor;
+        uniform sampler2D uDataTexture;
+        uniform float uTexSize;
+        uniform int uTotal;
+        uniform int uIdxB; // Index of the neighbor we are drawing boundary against
+        uniform vec3 uColor;
 
-            varying vec3 vPos;
-            varying vec3 vNormal;
+        varying vec3 vPos;
+        varying vec3 vNormal;
 
-            vec4 getCoeff(int index) {
-                float u = (float(index) + 0.5) / float(uTotal);
-                return texture2D(uDataTexture, vec2(u, 0.5));
-            }
+        // Fetch from 2D texture
+        vec4 getCoeff(int index) {
+        float col = mod(float(index), uTexSize);
+        float row = floor(float(index) / uTexSize);
+        // Center sampling
+        vec2 uv = vec2((col + 0.5) / uTexSize, (row + 0.5) / uTexSize);
+        return texture2D(uDataTexture, uv);
+        }
 
-            void main() {
-                // Geometric Margins
-                float capMargin = min(vPos.y, 0.5 - vPos.y);
-                float r = length(vec2(vPos.x, vPos.z));
-                float surfMargin = vPos.y - r;
-                float geoMargin = min(capMargin, surfMargin);
-                
-                if (geoMargin < 0.0) discard;
+        void main() {
+        // 1. Geometric Cone Margins
+        float capMargin = min(vPos.y, 0.5 - vPos.y);
+        float r = length(vec2(vPos.x, vPos.z));
+        float surfMargin = vPos.y - r;
+        float geoMargin = min(capMargin, surfMargin);
+        if (geoMargin < 0.0) discard;
 
-                // Voronoi Margins
-                // We are on the boundary between A (0) and B (i).
-                // Value here is ValA == ValB.
-                vec4 cA = getCoeff(uIdxA);
-                float valRef = dot(vPos, cA.xyz) + cA.w;
-                
-                float voronoiMargin = 100.0; 
+        // 2. Voronoi Check
+        // We are on boundary: A0 vs Ai (uIdxB)
+        // So Value(A0) == Value(Ai).
+        vec4 cA0 = getCoeff(0);
+        float valRef = dot(vPos, cA0.xyz) + cA0.w;
 
-                // Loop over all matrices to ensure no one else is closer
-                for (int k = 0; k < 20001; k++) { 
-                    if (k >= uTotal) break;
-                    if (k == uIdxA || k == uIdxB) continue;
-                    
-                    vec4 cK = getCoeff(k);
-                    float valK = dot(vPos, cK.xyz) + cK.w;
-                    
-                    float diff = valK - valRef;
-                    
-                    // If k is smaller, this pixel belongs to cell k, not cell 0.
-                    if (diff < -0.0001) discard; 
+        float voronoiMargin = 100.0;
 
-                    if (diff < voronoiMargin) voronoiMargin = diff;
-                }
+        // Loop through ALL matrices to ensure A0 is the closest (or tied with Ai)
+        for (int k = 1; k < ${count}; k++) {
+        if (k == uIdxB) continue;
 
-                // Rendering
-                float minMargin = min(geoMargin, voronoiMargin);
-                float fw = fwidth(minMargin);
-                float lineFactor = 1.0 - smoothstep(0.0, 1.5 * fw, minMargin);
+        vec4 cK = getCoeff(k);
+        float valK = dot(vPos, cK.xyz) + cK.w;
 
-                vec3 light = normalize(vec3(0.5, 1.0, 0.8));
-                float d = max(dot(vNormal, light), 0.0)*0.4 + 0.6;
-                
-                vec3 baseCol = uColor * d;
-                vec3 edgeCol = vec3(0.0, 0.0, 0.0); 
+        float diff = valK - valRef;
 
-                gl_FragColor = vec4(mix(baseCol, edgeCol, lineFactor), 1.0);
-            }
+        // If any other matrix K is closer than A0, this point isn't on the A0 cell boundary
+        if (diff < -0.0001) discard;
+
+        if (diff < voronoiMargin) voronoiMargin = diff;
+        }
+
+        // 3. Draw
+        float minMargin = min(geoMargin, voronoiMargin);
+        float fw = fwidth(minMargin);
+        float lineFactor = 1.0 - smoothstep(0.0, 1.5 * fw, minMargin);
+
+        vec3 light = normalize(vec3(0.5, 1.0, 0.8));
+        float d = max(dot(vNormal, light), 0.0)*0.4 + 0.6;
+
+        vec3 baseCol = uColor * d;
+        vec3 edgeCol = vec3(0.0, 0.0, 0.0);
+        gl_FragColor = vec4(mix(baseCol, edgeCol, lineFactor), 1.0);
+        }
         `;
 
         const colBase = new THREE.Color(0x2E8B57); // SeaGreen
 
         let facesDrawn = 0;
 
-        // Loop only i from 1 to N. 
-        // We only draw the face between A0 (index 0) and Ai.
+        // Iterate i from 1 to N (Neighbors)
         for (let i = 1; i < count; i++) {
-            
-            const cA = allCoeffs[0]; // Always A0
-            const cB = allCoeffs[i];
 
-            // Create Plane Geometry for 0 vs i
-            const nVec = new THREE.Vector3().subVectors(cA, cB);
-            const dVal = cA.w - cB.w;
-            const lenSq = nVec.lengthSq();
-            
-            if (lenSq < 1e-9) continue;
+        const cA = allCoeffs[0]; // A0
+        const cB = allCoeffs[i]; // Ai
 
-            facesDrawn++;
-            
-            const len = Math.sqrt(lenSq);
-            const planeSize = 2.0;
-            const geom = new THREE.PlaneGeometry(planeSize, planeSize);
-            const visualNormal = nVec.clone();
-            
-            geom.lookAt(visualNormal);
-            const dist = -dVal / len;
-            geom.translate(
-                (visualNormal.x / len) * dist,
-                (visualNormal.y / len) * dist,
-                (visualNormal.z / len) * dist
-            );
+        const nVec = new THREE.Vector3().subVectors(cA, cB);
+        const lenSq = nVec.lengthSq();
 
-            const mat = new THREE.ShaderMaterial({
-                uniforms: {
-                    uDataTexture: { value: dataTexture },
-                    uTotal: { value: count },
-                    uIdxA: { value: 0 }, // Fixed A0
-                    uIdxB: { value: i }, // Variable Ai
-                    uColor: { value: colBase }
-                },
-                vertexShader: vertexShader,
-                fragmentShader: fragmentShader,
-                side: THREE.DoubleSide
-            });
+        // If identical matrices (unlikely), skip
+        if (lenSq < 1e-9) continue;
 
-            const mesh = new THREE.Mesh(geom, mat);
-            visGroup.add(mesh);
-            wallMeshes.push(mesh);
+        // Basic distance check: if the plane is extremely far from origin, skip
+        // Plane dist = -(cA.w - cB.w) / len
+        // If dist > sqrt(3), it's likely outside the unit box/cone area
+        // But let's trust the shader discarding for visual accuracy
+
+        facesDrawn++;
+
+        const len = Math.sqrt(lenSq);
+        const dVal = cA.w - cB.w;
+        const planeSize = 2.0;
+        const geom = new THREE.PlaneGeometry(planeSize, planeSize);
+        const visualNormal = nVec.clone();
+
+        geom.lookAt(visualNormal);
+        const dist = -dVal / len;
+        geom.translate(
+        (visualNormal.x / len) * dist,
+        (visualNormal.y / len) * dist,
+        (visualNormal.z / len) * dist
+        );
+
+        const mat = new THREE.ShaderMaterial({
+        uniforms: {
+        uDataTexture: { value: dataTexture },
+        uTexSize: { value: texSize },
+        uTotal: { value: count },
+        uIdxB: { value: i }, // Compare against this specific neighbor
+        uColor: { value: colBase }
+        },
+        vertexShader: vertexShader,
+        fragmentShader: fragmentShader, // This string now contains the hardcoded loop limit
+        side: THREE.DoubleSide
+        });
+
+        const mesh = new THREE.Mesh(geom, mat);
+        visGroup.add(mesh);
+        wallMeshes.push(mesh);
         }
         return facesDrawn;
-    }
+        }
 
-    // --- 6. Save Functions ---
+        // --- 6. Save Functions ---
 
-    function saveAsImage() {
+        function saveAsImage() {
         renderer.render(scene, camera);
         const link = document.createElement('a');
-        link.download = 'voronoi_cell_a0.png';
+        link.download = 'poisson_voronoi_a0.png';
         link.href = renderer.domElement.toDataURL('image/png');
         link.click();
-    }
+        }
 
-    function saveAsHTML() {
+        function saveAsHTML() {
         const dataJson = JSON.stringify(allCoeffs);
         const camPos = camera.position.toArray();
         const camTarget = controls.target.toArray();
+        const count = allCoeffs.length;
 
         const exportContent = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Saved Poisson Voronoi A0 Cell</title>
-    <style>body{margin:0;overflow:hidden;background:#f5f5f5;}</style>
-</head>
-<body>
-<script type="importmap">
-  { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
-<\/script>
-<script type="module">
-    import * as THREE from 'three';
-    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+        <meta charset="UTF-8">
+        <title>Saved Poisson Voronoi A0 Cell</title>
+        <style>body{margin:0;overflow:hidden;background:#f5f5f5;}</style>
+        </head>
+        <body>
+        <script type="importmap">
+        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
+        <\/script>
+        <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-    const rawCoeffs = ${dataJson};
-    const allCoeffs = rawCoeffs.map(c => new THREE.Vector4(c.x, c.y, c.z, c.w));
-    const count = allCoeffs.length;
+        const rawCoeffs = ${dataJson};
+        const allCoeffs = rawCoeffs.map(c => new THREE.Vector4(c.x, c.y, c.z, c.w));
+        const count = allCoeffs.length;
 
-    const scene = new THREE.Scene(); scene.background = new THREE.Color(0xf5f5f5);
-    const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.01, 100);
-    camera.position.fromArray(${JSON.stringify(camPos)});
-    const renderer = new THREE.WebGLRenderer({antialias:true});
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.target.fromArray(${JSON.stringify(camTarget)}); controls.update();
+        const scene = new THREE.Scene(); scene.background = new THREE.Color(0xf5f5f5);
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.01, 100);
+        camera.position.fromArray(${JSON.stringify(camPos)});
+        const renderer = new THREE.WebGLRenderer({antialias:true});
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.target.fromArray(${JSON.stringify(camTarget)}); controls.update();
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-    const dl = new THREE.DirectionalLight(0xffffff, 0.5); dl.position.set(10,20,10); scene.add(dl);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+        const dl = new THREE.DirectionalLight(0xffffff, 0.5); dl.position.set(10,20,10); scene.add(dl);
 
-    const coneGeom = new THREE.ConeGeometry(0.5, 0.5, 64, 1, true);
-    coneGeom.rotateX(Math.PI); coneGeom.translate(0, 0.25, 0);
-    scene.add(new THREE.Mesh(coneGeom, new THREE.MeshPhongMaterial({color:0xaaaaaa, transparent:true, opacity:0.05, side:THREE.DoubleSide, depthWrite:false})));
+        const coneGeom = new THREE.ConeGeometry(0.5, 0.5, 64, 1, true);
+        coneGeom.rotateX(Math.PI); coneGeom.translate(0, 0.25, 0);
+        scene.add(new THREE.Mesh(coneGeom, new THREE.MeshPhongMaterial({color:0xaaaaaa, transparent:true, opacity:0.05, side:THREE.DoubleSide, depthWrite:false})));
 
-    const dataArray = new Float32Array(count * 4);
-    for(let i=0; i<count; i++) {
+        const texSize = Math.ceil(Math.sqrt(count));
+        const dataArray = new Float32Array(texSize * texSize * 4);
+        for(let i=0; i<count; i++) {
         dataArray[i*4] = allCoeffs[i].x; dataArray[i*4+1] = allCoeffs[i].y;
         dataArray[i*4+2] = allCoeffs[i].z; dataArray[i*4+3] = allCoeffs[i].w;
-    }
-    const dataTexture = new THREE.DataTexture(dataArray, count, 1, THREE.RGBAFormat, THREE.FloatType);
-    dataTexture.minFilter = THREE.NearestFilter; dataTexture.magFilter = THREE.NearestFilter; dataTexture.needsUpdate = true;
+        }
+        const dataTexture = new THREE.DataTexture(dataArray, texSize, texSize, THREE.RGBAFormat, THREE.FloatType);
+        dataTexture.minFilter = THREE.NearestFilter; dataTexture.magFilter = THREE.NearestFilter; dataTexture.needsUpdate = true;
 
-    const vs = \`varying vec3 vPos; varying vec3 vNormal;
+        const vs = \`varying vec3 vPos; varying vec3 vNormal;
         void main() { vPos = (modelMatrix * vec4(position, 1.0)).xyz; vNormal = normalize(normalMatrix * normal);
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }\`;
-    const fs = \`uniform sampler2D uDataTexture; uniform int uTotal; uniform int uIdxA; uniform int uIdxB; uniform vec3 uColor;
-        varying vec3 vPos; varying vec3 vNormal;
-        vec4 getCoeff(int index) { float u = (float(index)+0.5)/float(uTotal); return texture2D(uDataTexture, vec2(u,0.5)); }
-        void main() {
-            float capM = min(vPos.y, 0.5-vPos.y); float r = length(vec2(vPos.x, vPos.z)); float surfM = vPos.y-r;
-            float geoMargin = min(capM, surfM);
-            if(geoMargin < 0.0) discard;
-            vec4 cA = getCoeff(uIdxA); float valRef = dot(vPos, cA.xyz)+cA.w;
-            float vorMargin = 100.0;
-            for(int k=0; k<20001; k++) {
-                if(k>=uTotal) break; if(k==uIdxA || k==uIdxB) continue;
-                vec4 cK = getCoeff(k); float diff = (dot(vPos, cK.xyz)+cK.w) - valRef;
-                if(diff < -0.0001) discard;
-                if(diff < vorMargin) vorMargin = diff;
-            }
-            float minMargin = min(geoMargin, vorMargin); float fw = fwidth(minMargin);
-            float lf = 1.0 - smoothstep(0.0, 1.5*fw, minMargin);
-            vec3 light = normalize(vec3(0.5,1.0,0.8)); float d = max(dot(vNormal,light),0.0)*0.4+0.6;
-            gl_FragColor = vec4(mix(uColor*d, vec3(0.0), lf), 1.0);
-        }\`;
-    
-    const colBase = new THREE.Color(0x2E8B57);
 
-    // Simplified loop: i from 1 to count
-    for(let i=1; i<count; i++) {
+        // Dynamic loop limit injected
+        const fs = \`uniform sampler2D uDataTexture; uniform float uTexSize; uniform int uIdxB; uniform vec3 uColor;
+        varying vec3 vPos; varying vec3 vNormal;
+        vec4 getCoeff(int index) {
+        float col = mod(float(index), uTexSize); float row = floor(float(index)/uTexSize);
+        return texture2D(uDataTexture, vec2((col+0.5)/uTexSize, (row+0.5)/uTexSize));
+        }
+        void main() {
+        float capM = min(vPos.y, 0.5-vPos.y); float r = length(vec2(vPos.x, vPos.z)); float surfM = vPos.y-r;
+        float geoMargin = min(capM, surfM);
+        if(geoMargin < 0.0) discard;
+        vec4 cA0 = getCoeff(0); float valRef = dot(vPos, cA0.xyz)+cA0.w;
+        float vorMargin = 100.0;
+        for(int k=1; k<${count}; k++) {
+        if(k==uIdxB) continue;
+        vec4 cK = getCoeff(k); float diff = (dot(vPos, cK.xyz)+cK.w) - valRef;
+        if(diff < -0.0001) discard;
+        if(diff < vorMargin) vorMargin = diff;
+        }
+        float minMargin = min(geoMargin, vorMargin); float fw = fwidth(minMargin);
+        float lf = 1.0 - smoothstep(0.0, 1.5*fw, minMargin);
+        vec3 light = normalize(vec3(0.5,1.0,0.8)); float d = max(dot(vNormal,light),0.0)*0.4+0.6;
+        gl_FragColor = vec4(mix(uColor*d, vec3(0.0), lf), 1.0);
+        }\`;
+
+        const colBase = new THREE.Color(0x2E8B57);
+
+        for(let i=1; i<count; i++) {
         const cA = allCoeffs[0]; const cB = allCoeffs[i];
         const nVec = new THREE.Vector3().subVectors(cA, cB);
         if (nVec.lengthSq() < 1e-9) continue;
@@ -398,69 +484,71 @@
         const vN = nVec.clone(); geom.lookAt(vN);
         geom.translate((vN.x/nVec.length()) * -(cA.w-cB.w)/nVec.length(), (vN.y/nVec.length()) * -(cA.w-cB.w)/nVec.length(), (vN.z/nVec.length()) * -(cA.w-cB.w)/nVec.length());
         const mat = new THREE.ShaderMaterial({
-            uniforms: { uDataTexture:{value:dataTexture}, uTotal:{value:count}, uIdxA:{value:0}, uIdxB:{value:i}, uColor:{value:colBase} },
-            vertexShader: vs, fragmentShader: fs, side: THREE.DoubleSide
+        uniforms: { uDataTexture:{value:dataTexture}, uTexSize:{value:texSize}, uIdxB:{value:i}, uColor:{value:colBase} },
+        vertexShader: vs, fragmentShader: fs, side: THREE.DoubleSide
         });
         scene.add(new THREE.Mesh(geom, mat));
-    }
+        }
 
-    function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
-    animate();
-<\/script></body></html>`;
+        function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
+        animate();
+        <\/script></body></html>`;
 
         const blob = new Blob([exportContent], {type: 'text/html'});
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = 'poisson_voronoi_a0.html';
+        link.download = 'poisson_voronoi_a0_poisson_sampling.html';
         link.click();
-    }
+        }
 
-    function update() {
+        function update() {
         const nInput = document.getElementById('nInput');
         const loadDiv = document.getElementById('loading');
         const statsDiv = document.getElementById('statsOutput');
-        
+
         let nVal = parseInt(nInput.value);
-        if (isNaN(nVal) || nVal < 10) nVal = 10;
+        if (isNaN(nVal) || nVal < 5) nVal = 5;
 
         loadDiv.style.display = 'block';
         statsDiv.innerText = 'Generating data...';
 
         setTimeout(() => {
-            const start = performance.now();
-            generateData(nVal);
-            statsDiv.innerText = 'Calculating Geometry...';
-            
-            setTimeout(() => {
-                const faces = buildVoronoi();
-                const end = performance.now();
-                loadDiv.style.display = 'none';
-                statsDiv.innerText = `Faces: ${faces} | Time: ${((end-start)/1000).toFixed(2)}s`;
-            }, 20);
-        }, 20);
-    }
+        const start = performance.now();
+        generateData(nVal);
 
-    document.getElementById('btnResample').addEventListener('click', update);
-    document.getElementById('btnSaveImage').addEventListener('click', saveAsImage);
-    document.getElementById('btnSaveHTML').addEventListener('click', saveAsHTML);
-    document.getElementById('nInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') update(); });
-    
-    window.addEventListener('resize', () => {
+        const totalPoints = allCoeffs.length;
+        statsDiv.innerText = `Calculating Geometry (${totalPoints} points)...`;
+
+        setTimeout(() => {
+        const faces = buildVoronoi();
+        const end = performance.now();
+        loadDiv.style.display = 'none';
+        statsDiv.innerText = `Faces: ${faces} | Total Points: ${totalPoints} | Time: ${((end-start)/1000).toFixed(2)}s`;
+        }, 20);
+        }, 20);
+        }
+
+        document.getElementById('btnResample').addEventListener('click', update);
+        document.getElementById('btnSaveImage').addEventListener('click', saveAsImage);
+        document.getElementById('btnSaveHTML').addEventListener('click', saveAsHTML);
+        document.getElementById('nInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') update(); });
+
+        window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
-    });
+        });
 
-    update();
+        update();
 
-    function animate() {
+        function animate() {
         requestAnimationFrame(animate);
         controls.update();
         renderer.render(scene, camera);
-    }
-    animate();
+        }
+        animate();
 
-</script>
+    </script>
 </body>
 </html>
