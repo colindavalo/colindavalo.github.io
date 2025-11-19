@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Poisson Voronoi in PSD Cone</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #f5f5f5; font-family: sans-serif; }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 300px;
+            color: #333;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            pointer-events: auto;
+        }
+        .control-group { margin-top: 10px; margin-bottom: 10px; }
+        button {
+            background-color: #4682B4; color: white; border: none; 
+            padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 14px;
+        }
+        button:hover { background-color: #3a6d99; }
+        label { display: inline-block; width: 50px; font-weight: bold;}
+        input[type=range] { vertical-align: middle; }
+    </style>
+</head>
+<body>
+
+<div id="info">
+    <h3>Poisson Voronoi Cone</h3>
+    <p><strong>Space:</strong> Trace 1 PSD Matrices.</p>
+    <p><strong>Regions:</strong> min Tr(X A<sub>i</sub>).</p>
+    <p><strong>Data:</strong> A<sub>i</sub> ~ O<sub>i</sub>Diag(x,y,0)O<sub>i</sub><sup>T</sup> + Base A<sub>0</sub>.</p>
+    
+    <div class="control-group">
+        <label for="nSlider">N:</label>
+        <input type="range" id="nSlider" min="1" max="100" value="10" step="1">
+        <span id="nVal">10</span>
+    </div>
+    <button id="btnResample">Resample Matrices</button>
+    
+    <p style="font-size: 0.8em; color: #666; margin-top:10px">
+        Left Click: Rotate | Right: Pan | Scroll: Zoom
+    </p>
+</div>
+
+<!-- Import Three.js -->
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+</script>
+
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // --- 1. Scene Setup ---
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf5f5f5);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 100);
+    camera.position.set(1.8, 1.5, 2.5);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    
+    // Use logarithmic depth buffer to prevent z-fighting on complex intersections if possible, 
+    // though manual clipping is used here.
+    renderer.localClippingEnabled = true;
+    document.body.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+
+    // Lights
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    scene.add(ambientLight);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    dirLight.position.set(10, 20, 10);
+    scene.add(dirLight);
+
+    // --- 2. Math & Matrix Generation ---
+
+    // Generate a random 3x3 Orthogonal Matrix using QR decomposition concept
+    function getRandomOrthogonal() {
+        // 1. Create random vectors
+        const v1 = new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, Math.random()-0.5).normalize();
+        let v2 = new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, Math.random()-0.5);
+        let v3 = new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, Math.random()-0.5);
+
+        // 2. Gram-Schmidt process
+        // u1 = v1
+        // u2 = v2 - proj_u1(v2)
+        v2.sub(v1.clone().multiplyScalar(v1.dot(v2))).normalize();
+        // u3 = cross(u1, u2)
+        v3.crossVectors(v1, v2).normalize();
+
+        // Return as array of column vectors [c1, c2, c3]
+        return [v1, v2, v3];
+    }
+
+    // Calculate Trace Coeffs for A = O * Diag(lam1, lam2, lam3) * O^T
+    function getTraceCoeffsFromEigen(lam1, lam2, lam3, basis) {
+        // Basis is [u, v, w] columns of O.
+        // A = lam1 * u*u^T + lam2 * v*v^T + lam3 * w*w^T
+        
+        // We need entries of A: a11, a22, a33, a12 (since symmetric)
+        // a_ij = lam1 * u_i * u_j + lam2 * v_i * v_j + lam3 * w_i * w_j
+        
+        const u = basis[0], v = basis[1], w = basis[2];
+        
+        const a11 = lam1*u.x*u.x + lam2*v.x*v.x + lam3*w.x*w.x;
+        const a22 = lam1*u.y*u.y + lam2*v.y*v.y + lam3*w.y*w.y;
+        const a33 = lam1*u.z*u.z + lam2*v.z*v.z + lam3*w.z*w.z;
+        const a12 = lam1*u.x*u.y + lam2*v.x*v.y + lam3*w.x*w.y;
+
+        // Now map to functional Tr(X * A)
+        // X(x,y,z) = [[z+x, y, 0], [y, z-x, 0], [0, 0, 1-2z]]
+        // Tr(XA) = x(a11 - a22) + y(2*a12) + z(a11 + a22 - 2a33) + a33
+        
+        // Map to Visual Coordinates: X_vis=x, Y_vis=z(height), Z_vis=y
+        // Coeffs Vector C: C.x * X_vis + C.y * Y_vis + C.z * Z_vis + C.w
+        
+        return new THREE.Vector4(
+            a11 - a22,              // coeff for x
+            a11 + a22 - 2 * a33,    // coeff for z (visual Y)
+            2 * a12,                // coeff for y (visual Z)
+            a33                     // constant
+        );
+    }
+
+    // --- 3. State Management ---
+    
+    let N = 10;
+    let allCoeffs = []; // Array of Vector4
+    let wallMeshes = [];
+    
+    // Main Group to hold visualization
+    const visGroup = new THREE.Group();
+    scene.add(visGroup);
+
+    // --- 4. Visual Elements (Static) ---
+
+    // Ghost Cone (Visual shell)
+    const coneHeight = 0.5;
+    const coneRadius = 0.5;
+    const coneGeom = new THREE.ConeGeometry(coneRadius, coneHeight, 64, 1, true);
+    coneGeom.rotateX(Math.PI); // Tip at bottom
+    coneGeom.translate(0, coneHeight / 2, 0); // Base at 0.5
+    
+    const coneMat = new THREE.MeshPhongMaterial({
+        color: 0x888888, transparent: true, opacity: 0.1, 
+        side: THREE.DoubleSide, depthWrite: false 
+    });
+    scene.add(new THREE.Mesh(coneGeom, coneMat));
+
+    // Base Ring
+    const ringGeo = new THREE.RingGeometry(0.49, 0.51, 64);
+    ringGeo.rotateX(-Math.PI / 2);
+    ringGeo.translate(0, 0.5, 0);
+    scene.add(new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0x333333 })));
+    
+    // Grid
+    scene.add(new THREE.AxesHelper(0.2));
+    scene.add(new THREE.GridHelper(2, 20, 0xdddddd, 0xffffff));
+
+    // --- 5. Logic & Geometry Building ---
+
+    function generateData() {
+        allCoeffs = [];
+
+        // 1. Add A0 = Diag(0, 1, 1)
+        // This corresponds to the cone base region potentially
+        // a11=0, a22=1, a33=1, a12=0
+        // x_coeff: -1, z_coeff(height): 0+1-2 = -1, y_coeff: 0, const: 1
+        allCoeffs.push(new THREE.Vector4(-1, -1, 0, 1));
+
+        // 2. Generate N matrices
+        // Poisson logic: x, y uniform in [0, 10] (Simulating intensity 1 over area)
+        const Range = 10.0;
+
+        for (let i = 0; i < N; i++) {
+            const x = Math.random() * Range;
+            const y = Math.random() * Range;
+            
+            // Diag(x, y, 0)
+            // Rotate by O
+            const O = getRandomOrthogonal();
+            
+            const coeffs = getTraceCoeffsFromEigen(x, y, 0, O);
+            allCoeffs.push(coeffs);
+        }
+    }
+
+    function buildVoronoi() {
+        // Clear old meshes
+        wallMeshes.forEach(m => visGroup.remove(m));
+        wallMeshes = [];
+
+        // Count total matrices
+        const count = allCoeffs.length;
+
+        // Max uniforms array size in shader (safe bet is 64 vectors)
+        // We pass the entire array of coeffs to the shader so it can clip
+        const MAX_MATRICES = 30; 
+        
+        // Create a padded array for Uniforms
+        const uniformCoeffs = new Float32Array(MAX_MATRICES * 4);
+        for(let i=0; i<count && i<MAX_MATRICES; i++) {
+            uniformCoeffs[i*4+0] = allCoeffs[i].x;
+            uniformCoeffs[i*4+1] = allCoeffs[i].y;
+            uniformCoeffs[i*4+2] = allCoeffs[i].z;
+            uniformCoeffs[i*4+3] = allCoeffs[i].w;
+        }
+
+        // Shared Shader Logic
+        const vertexShader = `
+            varying vec3 vPos;
+            varying vec3 vNormal;
+            void main() {
+                vPos = (modelMatrix * vec4(position, 1.0)).xyz;
+                vNormal = normalize(normalMatrix * normal);
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+        `;
+
+        const fragmentShader = `
+            uniform vec4 allCoeffs[${MAX_MATRICES}];
+            uniform int uTotal;
+            uniform int uIdxA;
+            uniform int uIdxB;
+            uniform vec3 uColor;
+
+            varying vec3 vPos;
+            varying vec3 vNormal;
+
+            void main() {
+                // 1. Cone Clipping
+                // Visual Y is height. Cone: y >= sqrt(x^2 + z^2)
+                if (vPos.y < 0.0 || vPos.y > 0.5) discard;
+                if (vPos.x*vPos.x + vPos.z*vPos.z > vPos.y*vPos.y) discard;
+
+                // 2. Voronoi Clipping
+                // We are on the boundary of A and B.
+                // Value at this point:
+                vec4 cA = allCoeffs[uIdxA];
+                float valRef = dot(vPos, cA.xyz) + cA.w;
+                
+                // Check against all other K
+                for (int k = 0; k < ${MAX_MATRICES}; k++) {
+                    if (k >= uTotal) break;
+                    if (k == uIdxA || k == uIdxB) continue;
+
+                    vec4 cK = allCoeffs[k];
+                    float valK = dot(vPos, cK.xyz) + cK.w;
+
+                    // If region K has a strictly smaller trace value, 
+                    // this point belongs to region K, not boundary AB.
+                    // Use epsilon for numerical noise
+                    if (valK < valRef - 0.0001) discard;
+                }
+
+                // 3. Lighting
+                vec3 lightDir = normalize(vec3(0.5, 1.0, 0.8));
+                float diff = max(dot(vNormal, lightDir), 0.0) * 0.4 + 0.6; // ambient+diffuse
+                gl_FragColor = vec4(uColor * diff, 1.0);
+            }
+        `;
+
+        // Iterate all pairs (i, j)
+        // Optimization: With N=10, 55 pairs is fine.
+        for (let i = 0; i < count; i++) {
+            for (let j = i + 1; j < count; j++) {
+                
+                const cA = allCoeffs[i];
+                const cB = allCoeffs[j];
+
+                // Plane Normal (Diff of functionals)
+                const nVec = new THREE.Vector3().subVectors(cA, cB); // x, y, z components
+                const dVal = cA.w - cB.w;
+
+                // If normal is essentially zero, planes are parallel/identical (unlikely with random)
+                if (nVec.lengthSq() < 0.000001) continue;
+
+                // Create Geometry oriented to this plane
+                const planeSize = 2.0;
+                const geom = new THREE.PlaneGeometry(planeSize, planeSize);
+                
+                // Align:
+                // Normal vector in visual space: (nVec.x, nVec.y, nVec.z)
+                // Wait, cA components are already mapped to visual (x, y=height, z).
+                // But ThreeJS Vector3 is (x, y, z). 
+                // My getTraceCoeffs returns .y as height. 
+                // So nVec corresponds exactly to ThreeJS world space normal.
+                
+                const visualNormal = nVec.clone();
+                const len = visualNormal.length();
+                
+                geom.lookAt(visualNormal);
+                const dist = -dVal / len;
+                geom.translate(
+                    (visualNormal.x / len) * dist,
+                    (visualNormal.y / len) * dist,
+                    (visualNormal.z / len) * dist
+                );
+
+                // Random nice color
+                const hue = Math.random();
+                const sat = 0.5 + Math.random() * 0.5;
+                const light = 0.4 + Math.random() * 0.4;
+                const col = new THREE.Color().setHSL(hue, sat, light);
+
+                const mat = new THREE.ShaderMaterial({
+                    uniforms: {
+                        allCoeffs: { value: uniformCoeffs },
+                        uTotal: { value: count },
+                        uIdxA: { value: i },
+                        uIdxB: { value: j },
+                        uColor: { value: col }
+                    },
+                    vertexShader: vertexShader,
+                    fragmentShader: fragmentShader,
+                    side: THREE.DoubleSide
+                });
+
+                const mesh = new THREE.Mesh(geom, mat);
+                visGroup.add(mesh);
+                wallMeshes.push(mesh);
+            }
+        }
+    }
+
+    // --- 6. App Logic ---
+
+    function update() {
+        const nInput = document.getElementById('nSlider');
+        N = parseInt(nInput.value);
+        document.getElementById('nVal').textContent = N;
+
+        generateData();
+        buildVoronoi();
+    }
+
+    // Event Listeners
+    document.getElementById('btnResample').addEventListener('click', update);
+    document.getElementById('nSlider').addEventListener('input', (e) => {
+         document.getElementById('nVal').textContent = e.target.value;
+    });
+    document.getElementById('nSlider').addEventListener('change', update);
+
+    // Window Resize
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Init
+    update();
+
+    // Loop
+    function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+    }
+    animate();
+
+</script>
+</body>
+</html>

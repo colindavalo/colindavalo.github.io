@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>2D Poisson Voronoi Simplex</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #222; font-family: sans-serif; }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 320px;
+            color: #333;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .control-group { margin-top: 10px; margin-bottom: 10px; }
+        button {
+            background-color: #4682B4; color: white; border: none; 
+            padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 14px;
+        }
+        button:hover { background-color: #3a6d99; }
+        label { display: inline-block; width: 30px; font-weight: bold;}
+        input[type=range] { vertical-align: middle; width: 180px; }
+    </style>
+</head>
+<body>
+
+<div id="info">
+    <h3>2D Voronoi on Simplex</h3>
+    <p><strong>Domain:</strong> Diagonal Matrices X (Tr(X)=1, X&ge;0).</p>
+    <p><strong>Fixed Seeds:</strong> Diag(1,1,0), (1,0,1), (0,1,1).</p>
+    
+    <div class="control-group">
+        <label for="nSlider">N:</label>
+        <!-- Increased max to 200 -->
+        <input type="range" id="nSlider" min="1" max="200" value="50" step="1">
+        <span id="nVal">50</span>
+    </div>
+    <button id="btnResample">Resample Random A<sub>i</sub></button>
+</div>
+
+<!-- Import Three.js -->
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+    }
+  }
+</script>
+
+<script type="module">
+    import * as THREE from 'three';
+
+    // --- 1. Setup Scene ---
+    const scene = new THREE.Scene();
+    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    // Important: Handle High-DPI screens (Retina) to prevent off-center scaling
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // --- 2. Math Helpers ---
+
+    function getRandomOrthogonal() {
+        const v1 = new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, Math.random()-0.5).normalize();
+        let v2 = new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, Math.random()-0.5);
+        let v3 = new THREE.Vector3();
+
+        v2.sub(v1.clone().multiplyScalar(v1.dot(v2))).normalize();
+        v3.crossVectors(v1, v2).normalize();
+        return [v1, v2, v3];
+    }
+
+    function getDiagonalOfRotated(x, y, basis) {
+        const u = basis[0], v = basis[1]; 
+        // A = x * u*u^T + y * v*v^T
+        // Diagonal entries:
+        return new THREE.Vector3(
+            x * u.x*u.x + y * v.x*v.x,
+            x * u.y*u.y + y * v.y*v.y,
+            x * u.z*u.z + y * v.z*v.z
+        );
+    }
+
+    // --- 3. Data Management ---
+    
+    // Increased capacity for "Way larger N"
+    const MAX_MATRICES = 210; // 200 random + 3 fixed + buffer
+    let N = 50;
+    
+    const uniforms = {
+        uDiagonals: { value: new Float32Array(MAX_MATRICES * 3) },
+        uColors: { value: new Float32Array(MAX_MATRICES * 3) },
+        uCount: { value: 0 },
+        // Initialize with actual drawing buffer size (pixels)
+        uResolution: { value: new THREE.Vector2() }
+    };
+
+    function generateData() {
+        let count = 0;
+
+        function addMatrix(dVec, colVec) {
+            if(count >= MAX_MATRICES) return;
+            
+            // Flatten vec3 to array
+            uniforms.uDiagonals.value[count*3 + 0] = dVec.x;
+            uniforms.uDiagonals.value[count*3 + 1] = dVec.y;
+            uniforms.uDiagonals.value[count*3 + 2] = dVec.z;
+
+            uniforms.uColors.value[count*3 + 0] = colVec.r;
+            uniforms.uColors.value[count*3 + 1] = colVec.g;
+            uniforms.uColors.value[count*3 + 2] = colVec.b;
+            
+            count++;
+        }
+
+        // 1. Add the 3 Fixed Matrices
+        const fixed = [
+            new THREE.Vector3(1, 1, 0),
+            new THREE.Vector3(1, 0, 1),
+            new THREE.Vector3(0, 1, 1)
+        ];
+        const fixedCols = [
+            new THREE.Color(0xffaa00), // Orange
+            new THREE.Color(0x00aaff), // Blue
+            new THREE.Color(0xff00aa)  // Pink
+        ];
+        fixed.forEach((f, i) => addMatrix(f, fixedCols[i]));
+
+        // 2. Add N Random Matrices
+        const Range = 10.0;
+        for(let i=0; i<N; i++) {
+            const x = Math.random() * Range;
+            const y = Math.random() * Range;
+            const O = getRandomOrthogonal();
+            const diag = getDiagonalOfRotated(x, y, O);
+            
+            // Distinct pastel colors
+            const col = new THREE.Color().setHSL(Math.random(), 0.7, 0.55);
+            addMatrix(diag, col);
+        }
+
+        uniforms.uCount.value = count;
+    }
+
+    // --- 4. Shader ---
+    const geometry = new THREE.PlaneGeometry(2, 2);
+    
+    const material = new THREE.ShaderMaterial({
+        uniforms: uniforms,
+        vertexShader: `
+            void main() {
+                gl_Position = vec4(position, 1.0);
+            }
+        `,
+        fragmentShader: `
+            // Increase shader array limit matches JS
+            const int MAX_MATRICES = 210;
+            
+            uniform vec3 uDiagonals[MAX_MATRICES];
+            uniform vec3 uColors[MAX_MATRICES];
+            uniform int uCount;
+            uniform vec2 uResolution;
+
+            const float SQRT3 = 1.7320508;
+
+            // Barycentric coordinates for equilateral triangle
+            vec3 getBarycentric(vec2 p) {
+                // Radius 0.85 creates a nice fit
+                float r = 0.85;
+                vec2 v1 = vec2(0.0, r);                   // Top
+                vec2 v2 = vec2(r * SQRT3 * 0.5, -0.5 * r); // Bottom Right
+                vec2 v3 = vec2(-r * SQRT3 * 0.5, -0.5 * r);// Bottom Left
+                
+                float area = 0.5 * (-v2.y * v3.x + v1.y * (-v2.x + v3.x) + v1.x * (v2.y - v3.y) + v2.x * v3.y);
+                float s = 1.0 / (2.0 * area);
+                
+                float w1 = s * (v2.y * v3.x - v2.x * v3.y + (v3.y - v2.y) * p.x + (v2.x - v3.x) * p.y);
+                float w2 = s * (v3.y * v1.x - v3.x * v1.y + (v1.y - v3.y) * p.x + (v3.x - v1.x) * p.y);
+                float w3 = 1.0 - w1 - w2;
+                
+                return vec3(w1, w2, w3);
+            }
+
+            void main() {
+                // Calculate Aspect Ratio preserving coordinates
+                // We divide by the SMALLER dimension to ensure the domain [-1, 1] fits inside the screen
+                float minDim = min(uResolution.x, uResolution.y);
+                vec2 uv = (gl_FragCoord.xy - 0.5 * uResolution.xy) / minDim * 2.0;
+                
+                vec3 b = getBarycentric(uv);
+
+                // Mask outside Simplex (b.i >= 0 for all i)
+                if (min(b.x, min(b.y, b.z)) < -0.001) {
+                    // Dark background
+                    gl_FragColor = vec4(0.15, 0.15, 0.15, 1.0); 
+                    return;
+                }
+
+                // Voronoi Logic: Minimize dot(b, Diag_i)
+                float minVal = 100000.0;
+                int bestIdx = -1;
+                float secondVal = 100000.0;
+
+                // Loop can be heavy on weak GPUs with N=200, but standard for desktop
+                for (int i = 0; i < MAX_MATRICES; i++) {
+                    if (i >= uCount) break;
+                    
+                    float val = dot(b, uDiagonals[i]);
+                    
+                    if (val < minVal) {
+                        secondVal = minVal;
+                        minVal = val;
+                        bestIdx = i;
+                    } else if (val < secondVal) {
+                        secondVal = val;
+                    }
+                }
+
+                vec3 color = uColors[bestIdx];
+
+                // Anti-aliased Borders
+                float d = secondVal - minVal;
+                // Use minDim for consistent line width regardless of aspect ratio
+                float pixelScale = 2.0 / minDim; 
+                float thickness = 1.5 * pixelScale; 
+                
+                // Smoothstep for nice lines
+                float line = smoothstep(0.0, thickness, d);
+                color = mix(vec3(0.05), color, line);
+
+                // Simplex boundary edge
+                float edgeDist = min(b.x, min(b.y, b.z));
+                if (edgeDist < thickness * 2.0) {
+                     color = mix(vec3(1.0), color, smoothstep(0.0, thickness * 2.0, edgeDist));
+                }
+
+                gl_FragColor = vec4(color, 1.0);
+            }
+        `
+    });
+
+    const plane = new THREE.Mesh(geometry, material);
+    scene.add(plane);
+
+    // --- 5. Logic & UI ---
+
+    function updateSize() {
+        // Get physical pixel size
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        renderer.setSize(width, height);
+        
+        // Pass actual drawing buffer size to shader to fix high-DPI centering
+        const pixelRatio = renderer.getPixelRatio();
+        uniforms.uResolution.value.set(width * pixelRatio, height * pixelRatio);
+    }
+
+    function updateData() {
+        const nInput = document.getElementById('nSlider');
+        N = parseInt(nInput.value);
+        document.getElementById('nVal').textContent = N;
+        generateData();
+    }
+
+    window.addEventListener('resize', updateSize);
+    
+    // Buttons
+    document.getElementById('btnResample').addEventListener('click', updateData);
+    document.getElementById('nSlider').addEventListener('input', (e) => {
+        document.getElementById('nVal').textContent = e.target.value;
+    });
+    document.getElementById('nSlider').addEventListener('change', updateData);
+
+    // Init
+    updateSize();
+    updateData();
+
+    function animate() {
+        requestAnimationFrame(animate);
+        renderer.render(scene, camera);
+    }
+    animate();
+
+</script>
+</body>
+</html>
