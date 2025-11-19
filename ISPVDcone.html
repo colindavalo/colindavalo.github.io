@@ -2,58 +2,66 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Poisson Voronoi - A0 Modified</title>
+    <title>High-Performance Poisson Voronoi</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #f5f5f5; font-family: sans-serif; }
         #info {
             position: absolute;
             top: 10px;
             left: 10px;
-            width: 280px;
+            width: 260px;
             color: #333;
             background: rgba(255, 255, 255, 0.95);
             padding: 15px;
             border-radius: 8px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             pointer-events: auto;
+            z-index: 10;
         }
         .control-group { margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
-        .control-group label { font-weight: bold; font-size: 14px; }
-        .control-group input { width: 80px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; }
-        
-        .stats { font-size: 0.8em; color: #555; margin-top: 10px; background: #eee; padding: 5px; border-radius: 4px; text-align: center;}
+        .control-group label { font-weight: bold; font-size: 13px; }
+        .control-group input { width: 70px; padding: 4px; border: 1px solid #ccc; border-radius: 4px; }
         
         button {
             background-color: #4682B4; color: white; border: none; width: 100%;
-            padding: 10px; border-radius: 4px; cursor: pointer; font-size: 14px; margin-top: 10px;
+            padding: 8px; border-radius: 4px; cursor: pointer; font-size: 13px; margin-top: 5px;
         }
         button:hover { background-color: #3a6d99; }
-        #loading { display: none; font-size: 0.8em; color: #888; text-align: center; margin-top:5px; }
+        
+        button.secondary { background-color: #2E8B57; margin-top: 5px;}
+        button.secondary:hover { background-color: #256f45; }
+
+        #loading { display: none; font-size: 0.8em; color: #666; text-align: center; margin-top:8px; font-weight: bold;}
+        .stats { font-size: 0.75em; color: #888; text-align: center; margin-top: 5px;}
     </style>
 </head>
 <body>
 
 <div id="info">
-    <h3>Poisson Voronoi</h3>
-    <p style="font-size:0.9em; margin-bottom:10px">
-        <span style="color: #4682B4; font-weight:bold;">Blue:</span> Standard Faces<br>
-        <span style="color: #2E8B57; font-weight:bold;">Green:</span> Faces with A<sub>0</sub>
-    </p>
+    <h3>Ideal Selberg Poisson Voronoi diagrams in SL(3,R)</h3>
+    <p style="font-size:0.85em; color:#555;"> A Poisson distribution in the space of horofunction conditionned to having a fixed horofunctionis partially sampled. Then we draw the intersectio of the associated tesselation with a cone in the projective model of the symmetric space, corresponding to a parallel set. The fixed horofunction is centered at the tip of this cone.</p>
+
+<p style="font-size:0.85em; color:#555;"> The domain bounded by the green sides is the cell of the horofunction centerd at the tip of the cone, for the finite set of horofunctions sampled.</p>
     
     <div class="control-group">
-        <label for="nInput">N (Matrices):</label>
-        <input type="number" id="nInput" value="40" min="3" step="1">
+        <label for="nInput">Size N of the box in the Cartan algebra in which the horofunctions are sampled:</label>
+        <input type="number" id="nInput" value="200" min="1" max="2000" step="100">
     </div>
 
     <div class="control-group">
-        <label for="precInput" title="Monte Carlo samples">Precision:</label>
-        <input type="number" id="precInput" value="100" min="10" step="10">
+        <label for="precInput">Precision (allows to remove faces that are too small, high precision means more computation):</label>
+        <input type="number" id="precInput" value="100" min="1" step="100">
     </div>
 
-    <button id="btnResample">Generate / Resample</button>
-    <div id="loading">Calculating...</div>
+    <button id="btnResample">Generate (Resample)</button>
+    
+    <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
+    
+    <button class="secondary" id="btnSaveImage">Save Image (PNG)</button>
+    <button class="secondary" id="btnSaveHTML">Save 3D Scene (HTML)</button>
 
-    <div class="stats" id="statsOutput">Faces: 0 / 0</div>
+    <div id="loading">Calculating... (This may take time)</div>
+    <div class="stats" id="statsOutput">Faces: 0</div>
 </div>
 
 <script type="importmap">
@@ -76,7 +84,7 @@
     const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 100);
     camera.position.set(1.8, 1.5, 2.5);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
     document.body.appendChild(renderer.domElement);
@@ -89,7 +97,18 @@
     dirLight.position.set(10, 20, 10);
     scene.add(dirLight);
 
-    // --- 2. Math Helpers ---
+    // --- 2. Visual Environment ---
+    
+    const coneGeom = new THREE.ConeGeometry(0.5, 0.5, 64, 1, true);
+    coneGeom.rotateX(Math.PI); 
+    coneGeom.translate(0, 0.25, 0);
+    const coneMat = new THREE.MeshPhongMaterial({
+        color: 0xaaaaaa, transparent: true, opacity: 0.05, 
+        side: THREE.DoubleSide, depthWrite: false 
+    });
+    scene.add(new THREE.Mesh(coneGeom, coneMat));
+
+    // --- 3. Math & Matrix Logic ---
 
     function getRandomOrthogonal() {
         const v1 = new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, Math.random()-0.5).normalize();
@@ -115,27 +134,8 @@
         );
     }
 
-    // --- 3. Visual Context ---
+    // --- 4. Visibility Check (Optimization) ---
     
-    const coneGeom = new THREE.ConeGeometry(0.5, 0.5, 64, 1, true);
-    coneGeom.rotateX(Math.PI); 
-    coneGeom.translate(0, 0.25, 0);
-    const coneMat = new THREE.MeshPhongMaterial({
-        color: 0x888888, transparent: true, opacity: 0.1, 
-        side: THREE.DoubleSide, depthWrite: false 
-    });
-    scene.add(new THREE.Mesh(coneGeom, coneMat));
-
-    const ringGeo = new THREE.RingGeometry(0.49, 0.51, 64);
-    ringGeo.rotateX(-Math.PI / 2);
-    ringGeo.translate(0, 0.5, 0);
-    scene.add(new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0x333333 })));
-    
-    scene.add(new THREE.AxesHelper(0.2));
-    scene.add(new THREE.GridHelper(2, 20, 0xdddddd, 0xffffff));
-
-    // --- 4. Logic ---
-
     function checkFaceVisibility(cA, cB, allCoeffs, idxA, idxB, samplesCount) {
         const N = new THREE.Vector3().subVectors(cA, cB);
         const D = cA.w - cB.w;
@@ -171,6 +171,7 @@
 
             const valRef = pTest.dot(cA) + cA.w;
             let occluded = false;
+            
             for(let m=0; m<allCoeffs.length; m++) {
                 if (m === idxA || m === idxB) continue;
                 const cK = allCoeffs[m];
@@ -183,20 +184,16 @@
         return false; 
     }
 
+    // --- 5. Core Logic ---
+
     let allCoeffs = [];
     let wallMeshes = [];
     const visGroup = new THREE.Group();
     scene.add(visGroup);
 
-    const MAX_MATRICES = 128; 
-
     function generateData(nValue) {
         allCoeffs = [];
-        
-        // --- A0 (Base) is index 0 ---
         // A0 = Diag(1, 1, 0)
-        // Tr(X*A0) = 1*(z+x) + 1*(z-x) + 0 = 2z
-        // Coeffs in visual space (x, z_math, y_math) => (0, 2, 0)
         allCoeffs.push(new THREE.Vector4(0, 2, 0, 0));
 
         const Range = 10.0;
@@ -209,7 +206,6 @@
     }
 
     function buildVoronoi(precisionSamples) {
-        // Cleanup
         wallMeshes.forEach(m => {
             m.geometry.dispose();
             m.material.dispose();
@@ -218,15 +214,20 @@
         wallMeshes = [];
 
         const count = allCoeffs.length;
-        const effectiveMax = Math.min(count, MAX_MATRICES);
-        const uniformCoeffs = new Float32Array(MAX_MATRICES * 4);
-        
-        for(let i=0; i<effectiveMax; i++) {
-            uniformCoeffs[i*4] = allCoeffs[i].x;
-            uniformCoeffs[i*4+1] = allCoeffs[i].y;
-            uniformCoeffs[i*4+2] = allCoeffs[i].z;
-            uniformCoeffs[i*4+3] = allCoeffs[i].w;
+
+        // Data Texture Setup (supports high N)
+        const dataArray = new Float32Array(count * 4);
+        for(let i=0; i<count; i++) {
+            dataArray[i*4+0] = allCoeffs[i].x;
+            dataArray[i*4+1] = allCoeffs[i].y;
+            dataArray[i*4+2] = allCoeffs[i].z;
+            dataArray[i*4+3] = allCoeffs[i].w;
         }
+        
+        const dataTexture = new THREE.DataTexture(dataArray, count, 1, THREE.RGBAFormat, THREE.FloatType);
+        dataTexture.minFilter = THREE.NearestFilter;
+        dataTexture.magFilter = THREE.NearestFilter;
+        dataTexture.needsUpdate = true;
 
         const vertexShader = `
             varying vec3 vPos;
@@ -239,7 +240,7 @@
         `;
 
         const fragmentShader = `
-            uniform vec4 allCoeffs[${MAX_MATRICES}];
+            uniform sampler2D uDataTexture;
             uniform int uTotal;
             uniform int uIdxA;
             uniform int uIdxB;
@@ -248,10 +249,13 @@
             varying vec3 vPos;
             varying vec3 vNormal;
 
-            void main() {
-                // --- 1. Margin Checks for Edge Drawing ---
+            vec4 getCoeff(int index) {
+                float u = (float(index) + 0.5) / float(uTotal);
+                return texture2D(uDataTexture, vec2(u, 0.5));
+            }
 
-                // A. Cone Geometric Margins
+            void main() {
+                // Geometric Margins
                 float capMargin = min(vPos.y, 0.5 - vPos.y);
                 float r = length(vec2(vPos.x, vPos.z));
                 float surfMargin = vPos.y - r;
@@ -259,26 +263,26 @@
                 
                 if (geoMargin < 0.0) discard;
 
-                // B. Voronoi Margins
-                vec4 cA = allCoeffs[uIdxA];
+                // Voronoi Margins
+                vec4 cA = getCoeff(uIdxA);
                 float valRef = dot(vPos, cA.xyz) + cA.w;
                 
                 float voronoiMargin = 100.0; 
 
-                for (int k = 0; k < ${MAX_MATRICES}; k++) {
+                for (int k = 0; k < 2001; k++) { 
                     if (k >= uTotal) break;
                     if (k == uIdxA || k == uIdxB) continue;
                     
-                    vec4 cK = allCoeffs[k];
+                    vec4 cK = getCoeff(k);
                     float valK = dot(vPos, cK.xyz) + cK.w;
                     
                     float diff = valK - valRef;
-                    if (diff < -0.0001) discard; // Occluded
+                    if (diff < -0.0001) discard; 
 
                     if (diff < voronoiMargin) voronoiMargin = diff;
                 }
 
-                // --- 2. Rendering ---
+                // Rendering
                 float minMargin = min(geoMargin, voronoiMargin);
                 float fw = fwidth(minMargin);
                 float lineFactor = 1.0 - smoothstep(0.0, 1.5 * fw, minMargin);
@@ -293,12 +297,10 @@
             }
         `;
 
-        let facesDrawn = 0;
-        const potentialFaces = (count * (count - 1)) / 2;
+        const colNormal = new THREE.Color(0x4682B4);
+        const colBase   = new THREE.Color(0x2E8B57);
 
-        // Colors
-        const colNormal = new THREE.Color(0x4682B4); // SteelBlue
-        const colBase   = new THREE.Color(0x2E8B57); // SeaGreen
+        let facesDrawn = 0;
 
         for (let i = 0; i < count; i++) {
             for (let j = i + 1; j < count; j++) {
@@ -306,23 +308,28 @@
                 const cA = allCoeffs[i];
                 const cB = allCoeffs[j];
 
-                if (!checkFaceVisibility(cA, cB, allCoeffs, i, j, precisionSamples)) {
-                    continue;
-                }
+                // --- OPTIMIZATION CHECK ---
+                // Identify if this is a "Green Face" (involves A0 at index 0)
+                const isGreenFace = (i === 0 || j === 0);
 
+                // Logic: If it's NOT green, run the visibility check.
+                // If it IS green, skip check and draw it anyway.
+                if (!isGreenFace) {
+                    if (!checkFaceVisibility(cA, cB, allCoeffs, i, j, precisionSamples)) {
+                        continue;
+                    }
+                }
+                
                 facesDrawn++;
 
-                // Index 0 is A0. Use Green if A0 is involved.
-                let faceColor = (i === 0 || j === 0) ? colBase : colNormal;
+                const faceColor = isGreenFace ? colBase : colNormal;
 
-                // Geometry
                 const nVec = new THREE.Vector3().subVectors(cA, cB);
                 const dVal = cA.w - cB.w;
                 const len = nVec.length();
                 
                 const planeSize = 2.0;
                 const geom = new THREE.PlaneGeometry(planeSize, planeSize);
-                
                 const visualNormal = nVec.clone();
                 geom.lookAt(visualNormal);
                 const dist = -dVal / len;
@@ -334,8 +341,8 @@
 
                 const mat = new THREE.ShaderMaterial({
                     uniforms: {
-                        allCoeffs: { value: uniformCoeffs },
-                        uTotal: { value: effectiveMax },
+                        uDataTexture: { value: dataTexture },
+                        uTotal: { value: count },
                         uIdxA: { value: i },
                         uIdxB: { value: j },
                         uColor: { value: faceColor }
@@ -350,33 +357,183 @@
                 wallMeshes.push(mesh);
             }
         }
+        return facesDrawn;
+    }
 
-        document.getElementById('statsOutput').innerText = 
-            `Faces Drawn: ${facesDrawn} / ${potentialFaces} pairs`;
+    // --- 6. Save Functions ---
+
+    function saveAsImage() {
+        renderer.render(scene, camera);
+        const link = document.createElement('a');
+        link.download = 'voronoi_cone.png';
+        link.href = renderer.domElement.toDataURL('image/png');
+        link.click();
+    }
+
+    function saveAsHTML() {
+        const dataJson = JSON.stringify(allCoeffs);
+        const camPos = camera.position.toArray();
+        const camTarget = controls.target.toArray();
+
+        const exportContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Saved Poisson Voronoi Scene</title>
+    <style>body{margin:0;overflow:hidden;background:#f5f5f5;}</style>
+</head>
+<body>
+<script type="importmap">
+  { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
+<\/script>
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    const rawCoeffs = ${dataJson};
+    const allCoeffs = rawCoeffs.map(c => new THREE.Vector4(c.x, c.y, c.z, c.w));
+    const count = allCoeffs.length;
+
+    const scene = new THREE.Scene(); scene.background = new THREE.Color(0xf5f5f5);
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.01, 100);
+    camera.position.fromArray(${JSON.stringify(camPos)});
+    const renderer = new THREE.WebGLRenderer({antialias:true});
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.fromArray(${JSON.stringify(camTarget)}); controls.update();
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+    const dl = new THREE.DirectionalLight(0xffffff, 0.5); dl.position.set(10,20,10); scene.add(dl);
+
+    const coneGeom = new THREE.ConeGeometry(0.5, 0.5, 64, 1, true);
+    coneGeom.rotateX(Math.PI); coneGeom.translate(0, 0.25, 0);
+    scene.add(new THREE.Mesh(coneGeom, new THREE.MeshPhongMaterial({color:0xaaaaaa, transparent:true, opacity:0.05, side:THREE.DoubleSide, depthWrite:false})));
+
+    const dataArray = new Float32Array(count * 4);
+    for(let i=0; i<count; i++) {
+        dataArray[i*4] = allCoeffs[i].x; dataArray[i*4+1] = allCoeffs[i].y;
+        dataArray[i*4+2] = allCoeffs[i].z; dataArray[i*4+3] = allCoeffs[i].w;
+    }
+    const dataTexture = new THREE.DataTexture(dataArray, count, 1, THREE.RGBAFormat, THREE.FloatType);
+    dataTexture.minFilter = THREE.NearestFilter; dataTexture.magFilter = THREE.NearestFilter; dataTexture.needsUpdate = true;
+
+    const vs = \`varying vec3 vPos; varying vec3 vNormal;
+        void main() { vPos = (modelMatrix * vec4(position, 1.0)).xyz; vNormal = normalize(normalMatrix * normal);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }\`;
+    const fs = \`uniform sampler2D uDataTexture; uniform int uTotal; uniform int uIdxA; uniform int uIdxB; uniform vec3 uColor;
+        varying vec3 vPos; varying vec3 vNormal;
+        vec4 getCoeff(int index) { float u = (float(index)+0.5)/float(uTotal); return texture2D(uDataTexture, vec2(u,0.5)); }
+        void main() {
+            float capM = min(vPos.y, 0.5-vPos.y); float r = length(vec2(vPos.x, vPos.z)); float surfM = vPos.y-r;
+            float geoMargin = min(capM, surfM);
+            if(geoMargin < 0.0) discard;
+            vec4 cA = getCoeff(uIdxA); float valRef = dot(vPos, cA.xyz)+cA.w;
+            float vorMargin = 100.0;
+            for(int k=0; k<2001; k++) {
+                if(k>=uTotal) break; if(k==uIdxA || k==uIdxB) continue;
+                vec4 cK = getCoeff(k); float diff = (dot(vPos, cK.xyz)+cK.w) - valRef;
+                if(diff < -0.0001) discard;
+                if(diff < vorMargin) vorMargin = diff;
+            }
+            float minMargin = min(geoMargin, vorMargin); float fw = fwidth(minMargin);
+            float lf = 1.0 - smoothstep(0.0, 1.5*fw, minMargin);
+            vec3 light = normalize(vec3(0.5,1.0,0.8)); float d = max(dot(vNormal,light),0.0)*0.4+0.6;
+            gl_FragColor = vec4(mix(uColor*d, vec3(0.0), lf), 1.0);
+        }\`;
+    
+    const colNormal = new THREE.Color(0x4682B4); const colBase = new THREE.Color(0x2E8B57);
+
+    function checkVis(cA, cB, idxA, idxB) {
+        const N = new THREE.Vector3().subVectors(cA, cB); const D = cA.w - cB.w;
+        if (N.lengthSq() < 1e-9) return false;
+        const len = N.length(); const n = N.clone().divideScalar(len);
+        const coneC = new THREE.Vector3(0, 0.25, 0);
+        const P = coneC.clone().sub(n.clone().multiplyScalar(n.dot(coneC) + D/len));
+        if(P.length()>1.5) return false;
+        let arb = new THREE.Vector3(0,1,0); if(Math.abs(n.y)>0.9) arb.set(1,0,0);
+        const U = new THREE.Vector3().crossVectors(n, arb).normalize();
+        const V = new THREE.Vector3().crossVectors(n, U).normalize();
+        const pTest = new THREE.Vector3();
+        for(let k=0; k<40; k++) { 
+            const r = Math.sqrt(Math.random())*0.6; const th = Math.random()*6.28;
+            pTest.copy(P).addScaledVector(U, r*Math.cos(th)).addScaledVector(V, r*Math.sin(th));
+            if(pTest.y<0.0 || pTest.y>0.5 || pTest.x*pTest.x+pTest.z*pTest.z > pTest.y*pTest.y) continue;
+            let occ = false;
+            for(let m=0; m<count; m++) {
+                if(m==idxA||m==idxB) continue;
+                if(pTest.dot(allCoeffs[m])+allCoeffs[m].w < pTest.dot(cA)+cA.w - 0.001) { occ=true; break;}
+            }
+            if(!occ) return true;
+        }
+        return false;
+    }
+
+    for(let i=0; i<count; i++) {
+        for(let j=i+1; j<count; j++) {
+            const isGreen = (i==0 || j==0);
+            if(!isGreen) {
+                if(!checkVis(allCoeffs[i], allCoeffs[j], i, j)) continue;
+            }
+            const cA = allCoeffs[i]; const cB = allCoeffs[j];
+            const nVec = new THREE.Vector3().subVectors(cA, cB);
+            const geom = new THREE.PlaneGeometry(2,2);
+            const vN = nVec.clone(); geom.lookAt(vN);
+            geom.translate((vN.x/nVec.length()) * -(cA.w-cB.w)/nVec.length(), (vN.y/nVec.length()) * -(cA.w-cB.w)/nVec.length(), (vN.z/nVec.length()) * -(cA.w-cB.w)/nVec.length());
+            const col = isGreen ? colBase : colNormal;
+            const mat = new THREE.ShaderMaterial({
+                uniforms: { uDataTexture:{value:dataTexture}, uTotal:{value:count}, uIdxA:{value:i}, uIdxB:{value:j}, uColor:{value:col} },
+                vertexShader: vs, fragmentShader: fs, side: THREE.DoubleSide
+            });
+            scene.add(new THREE.Mesh(geom, mat));
+        }
+    }
+    function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
+    animate();
+<\/script></body></html>`;
+
+        const blob = new Blob([exportContent], {type: 'text/html'});
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'poisson_voronoi_scene.html';
+        link.click();
     }
 
     function update() {
         const nInput = document.getElementById('nInput');
         const precInput = document.getElementById('precInput');
         const loadDiv = document.getElementById('loading');
+        const statsDiv = document.getElementById('statsOutput');
         
         let nVal = parseInt(nInput.value);
         let pVal = parseInt(precInput.value);
-        if (isNaN(nVal) || nVal < 2) nVal = 3;
-        if (isNaN(pVal) || pVal < 1) pVal = 50;
+        if (isNaN(nVal) || nVal < 3) nVal = 3;
+        if (isNaN(pVal) || pVal < 10) pVal = 50;
 
         loadDiv.style.display = 'block';
+        statsDiv.innerText = 'Generating data...';
+
         setTimeout(() => {
+            const start = performance.now();
             generateData(nVal);
-            buildVoronoi(pVal);
-            loadDiv.style.display = 'none';
+            statsDiv.innerText = 'Calculating Geometry...';
+            
+            setTimeout(() => {
+                const faces = buildVoronoi(pVal);
+                const end = performance.now();
+                loadDiv.style.display = 'none';
+                statsDiv.innerText = `Faces: ${faces} | Time: ${((end-start)/1000).toFixed(2)}s`;
+            }, 20);
         }, 20);
     }
 
     document.getElementById('btnResample').addEventListener('click', update);
+    document.getElementById('btnSaveImage').addEventListener('click', saveAsImage);
+    document.getElementById('btnSaveHTML').addEventListener('click', saveAsHTML);
     document.getElementById('nInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') update(); });
-    document.getElementById('precInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') update(); });
-
+    
     window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
