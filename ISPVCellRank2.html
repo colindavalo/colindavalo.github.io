@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath: [['$', '$'], ['\\(', '\\)']]
+    }
+  };
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<head>
+    <meta charset="UTF-8">
+    <title>Ideal Selberg Poisson Voronoi</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #f5f5f5; font-family: sans-serif; }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 280px;
+            color: #333;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+        .control-group { margin-bottom: 10px; }
+        label { font-weight: bold; font-size: 13px; display:block; margin-bottom: 4px;}
+        input { width: 100%; padding: 4px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;}
+        
+        button {
+            background-color: #4682B4; color: white; border: none; width: 100%;
+            padding: 8px; border-radius: 4px; cursor: pointer; font-size: 13px; margin-top: 5px;
+        }
+        button:hover { background-color: #3a6d99; }
+        
+        button.secondary { background-color: #2E8B57; margin-top: 5px;}
+        button.secondary:hover { background-color: #256f45; }
+
+        .stats { font-size: 0.75em; color: #666; text-align: center; margin-top: 8px;}
+        #loading { display:none; color: #d00; font-weight: bold; text-align: center; margin-top:5px;}
+    </style>
+</head>
+<body>
+
+<div id="info">
+    <h3>Polyhedral Voronoi Cell</h3>
+    <p style="font-size:0.85em; color:#555;">
+        In a parallel set in the symmetric space $\mathcal{X}$ of $\text{SL}(3,\mathbb{R})$, represented by this projective tube, a cell from an ideal Selberg Poisson Voronoï Tesselation where the Poisson distribution is conditioned on containing a fixed horofunction.
+    </p>
+    
+    <div class="control-group">
+        <label>N (Size of the box in the exponentioal of tthe Weyl chamber on which the distribution if computed (In average there will be $N^2$ horofunctions)):</label>
+        <input type="number" id="nInput" value="100" min="50" max="500" step="50">
+    </div>
+
+    <button id="btnGen">Resample distribution (or press Enter)</button>
+    <div id="loading">Computing Cuts...</div>
+    
+    <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
+    <button class="secondary" id="btnSaveHTML">Save Scene (HTML)</button>
+     <button class="secondary" id="btnSaveImage">Save Image (PNG)</button>
+
+    <div class="stats" id="statsOutput">Vertices: 0 | Faces: 0</div>
+</div>
+
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+</script>
+
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // --- 1. Scene Setup ---
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf5f5f5);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 100);
+    camera.position.set(1.8, 1.5, 2.5);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    document.body.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+
+    // Lights
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+    dirLight.position.set(5, 10, 7);
+    scene.add(dirLight);
+    const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.3);
+    dirLight2.position.set(-5, 5, -5);
+    scene.add(dirLight2);
+
+    // --- 2. Visual Shell (The Ghost Cone) ---
+    // This is the "reference" cone that remains uncropped
+    const shellGeom = new THREE.ConeGeometry(0.5, 0.5, 128, 1, true);
+    shellGeom.rotateX(Math.PI); // Flip so tip is at bottom relative to geometry center
+    shellGeom.translate(0, 0.25, 0); // Move tip to (0,0,0), base to (0, 0.5, 0)
+
+    const shellMat = new THREE.MeshBasicMaterial({
+        color: 0xaaaaaa,
+        transparent: true,
+        opacity: 0.08, // Very transparent
+        side: THREE.DoubleSide,
+        depthWrite: false // Don't hide internal objects
+    });
+    const shellMesh = new THREE.Mesh(shellGeom, shellMat);
+    scene.add(shellMesh);
+
+    // --- 3. Computational Geometry Classes ---
+
+    class Polyhedron {
+        constructor(vertices, faces) {
+            this.vertices = vertices || []; 
+            this.faces = faces || [];       
+            this.faceTags = [];             
+            
+            if(this.faces.length > 0 && this.faceTags.length === 0) {
+                this.faceTags = new Array(this.faces.length).fill(0);
+            }
+        }
+
+        clip(planeNormal, planeConst) {
+            const dists = [];
+            let allInside = true;
+            let allOutside = true;
+
+            for (let i = 0; i < this.vertices.length; i++) {
+                const d = this.vertices[i].dot(planeNormal) + planeConst;
+                dists.push(d);
+                if (d > 0.000001) allInside = false;  
+                if (d < -0.000001) allOutside = false;
+            }
+
+            if (allInside) return; 
+            if (allOutside) {
+                this.vertices = [];
+                this.faces = [];
+                this.faceTags = [];
+                return;
+            }
+
+            const newVerts = [];
+            const newFaces = [];
+            const newTags = [];
+            const indexMap = new Array(this.vertices.length).fill(-1);
+
+            for(let i=0; i<this.vertices.length; i++) {
+                if(dists[i] <= 0.000001) {
+                    indexMap[i] = newVerts.length;
+                    newVerts.push(this.vertices[i]);
+                }
+            }
+
+            const getInter = (idxA, idxB) => {
+                const dA = dists[idxA];
+                const dB = dists[idxB];
+                const t = dA / (dA - dB);
+                const vA = this.vertices[idxA];
+                const vB = this.vertices[idxB];
+                const vNew = new THREE.Vector3().copy(vA).lerp(vB, t);
+                const newIdx = newVerts.length;
+                newVerts.push(vNew);
+                return newIdx;
+            };
+
+            for(let f=0; f<this.faces.length; f++) {
+                const face = this.faces[f];
+                const tag = this.faceTags[f];
+                const currentPoly = [];
+                
+                for(let i=0; i<face.length; i++) {
+                    const idxA = face[i];
+                    const idxB = face[(i+1) % face.length];
+                    const dA = dists[idxA];
+                    const dB = dists[idxB];
+
+                    if(dA <= 0.000001) {
+                        currentPoly.push(indexMap[idxA]);
+                    }
+                    if ((dA > 0.000001 && dB <= 0.000001) || (dA <= 0.000001 && dB > 0.000001)) {
+                        const idxInter = getInter(idxA, idxB);
+                        currentPoly.push(idxInter);
+                    }
+                }
+                if(currentPoly.length >= 3) {
+                    newFaces.push(currentPoly);
+                    newTags.push(tag);
+                }
+            }
+
+            const onPlaneIndices = [];
+            for(let i=0; i<newVerts.length; i++) {
+                if(Math.abs(newVerts[i].dot(planeNormal) + planeConst) < 0.0001) {
+                    onPlaneIndices.push(i);
+                }
+            }
+
+            if(onPlaneIndices.length >= 3) {
+                const center = new THREE.Vector3();
+                onPlaneIndices.forEach(idx => center.add(newVerts[idx]));
+                center.divideScalar(onPlaneIndices.length);
+                
+                let up = new THREE.Vector3(0, 1, 0);
+                if (Math.abs(planeNormal.y) > 0.9) up.set(0, 0, 1);
+                const axisX = new THREE.Vector3().crossVectors(planeNormal, up).normalize();
+                const axisY = new THREE.Vector3().crossVectors(planeNormal, axisX).normalize();
+
+                onPlaneIndices.sort((a, b) => {
+                    const vecA = new THREE.Vector3().subVectors(newVerts[a], center);
+                    const vecB = new THREE.Vector3().subVectors(newVerts[b], center);
+                    const angA = Math.atan2(vecA.dot(axisY), vecA.dot(axisX));
+                    const angB = Math.atan2(vecB.dot(axisY), vecB.dot(axisX));
+                    return angA - angB;
+                });
+
+                newFaces.push(onPlaneIndices);
+                newTags.push(1); // 1 = Cut Face
+            }
+
+            this.vertices = newVerts;
+            this.faces = newFaces;
+            this.faceTags = newTags;
+        }
+
+        toBufferGeometry() {
+            const pos = [];
+            const cols = [];
+            const normals = [];
+            const colorCone = new THREE.Color(0xaaaaaa);
+            const colorCut = new THREE.Color(0x2E8B57); 
+
+            for(let f=0; f<this.faces.length; f++) {
+                const face = this.faces[f];
+                const tag = this.faceTags[f];
+                const baseColor = (tag === 1) ? colorCut : colorCone;
+                
+                const p0 = this.vertices[face[0]];
+                const p1 = this.vertices[face[1]];
+                const p2 = this.vertices[face[2]];
+                const vA = new THREE.Vector3().subVectors(p1, p0);
+                const vB = new THREE.Vector3().subVectors(p2, p0);
+                const norm = new THREE.Vector3().crossVectors(vA, vB).normalize();
+
+                for(let i=1; i<face.length-1; i++) {
+                    const v0 = this.vertices[face[0]];
+                    const v1 = this.vertices[face[i]];
+                    const v2 = this.vertices[face[i+1]];
+
+                    pos.push(v0.x, v0.y, v0.z);
+                    pos.push(v1.x, v1.y, v1.z);
+                    pos.push(v2.x, v2.y, v2.z);
+
+                    normals.push(norm.x, norm.y, norm.z);
+                    normals.push(norm.x, norm.y, norm.z);
+                    normals.push(norm.x, norm.y, norm.z);
+
+                    cols.push(baseColor.r, baseColor.g, baseColor.b);
+                    cols.push(baseColor.r, baseColor.g, baseColor.b);
+                    cols.push(baseColor.r, baseColor.g, baseColor.b);
+                }
+            }
+
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+            geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+            geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+            return geo;
+        }
+    }
+
+    // --- 4. Math Helpers ---
+
+    function getRandomOrthogonal() {
+        const v1 = new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, Math.random()-0.5).normalize();
+        let v2 = new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, Math.random()-0.5);
+        v2.sub(v1.clone().multiplyScalar(v1.dot(v2))).normalize();
+        const v3 = new THREE.Vector3().crossVectors(v1, v2).normalize();
+        return [v1, v2, v3];
+    }
+
+    function getTraceCoeffsFromEigen(lam1, lam2, lam3, basis) {
+        const u = basis[0], v = basis[1], w = basis[2];
+        const a11 = lam1*u.x*u.x + lam2*v.x*v.x + lam3*w.x*w.x;
+        const a22 = lam1*u.y*u.y + lam2*v.y*v.y + lam3*w.y*w.y;
+        const a33 = lam1*u.z*u.z + lam2*v.z*v.z + lam3*w.z*w.z;
+        const a12 = lam1*u.x*u.y + lam2*v.x*v.y + lam3*w.x*w.y;
+        return new THREE.Vector4(a11 - a22, a11 + a22 - 2 * a33, 2 * a12, a33);
+    }
+
+    function getPoisson(lambda) {
+        if (lambda > 30) {
+            const u = 1 - Math.random();
+            const v = Math.random();
+            const z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+            return Math.max(0, Math.round(lambda + Math.sqrt(lambda) * z));
+        } else {
+            let L = Math.exp(-lambda);
+            let k = 0;
+            let p = 1;
+            do { k++; p *= Math.random(); } while (p > L);
+            return k - 1;
+        }
+    }
+
+    function generateConePolyhedron(segments) {
+        const verts = [];
+        const faces = [];
+        verts.push(new THREE.Vector3(0, 0, 0)); 
+        const r = 0.5;
+        const yBase = 0.5;
+        for(let i=0; i<segments; i++) {
+            const theta = (i / segments) * Math.PI * 2;
+            const x = r * Math.cos(theta);
+            const z = r * Math.sin(theta);
+            verts.push(new THREE.Vector3(x, yBase, z));
+        }
+        for(let i=1; i<=segments; i++) {
+            const next = (i === segments) ? 1 : i + 1;
+            faces.push([0, next, i]); 
+        }
+        const baseIndices = [];
+        for(let i=segments; i>=1; i--) { 
+            baseIndices.push(i);
+        }
+        faces.push(baseIndices);
+        return new Polyhedron(verts, faces);
+    }
+
+    let currentMesh = null;
+    let currentEdges = null;
+
+    function generateVoronoiGeometry(N, segments) {
+        const coeffs = [];
+        const cA0 = new THREE.Vector4(0, 2, 0, 0); 
+        coeffs.push(cA0);
+
+        const intensity = N * N;
+        const M = getPoisson(intensity);
+        console.log(`Generating ${M} matrices for N=${N}`);
+
+        for (let i = 0; i < M; i++) {
+            const x = Math.random() * N;
+            const y = Math.random() * N;
+            const O = getRandomOrthogonal();
+            coeffs.push(getTraceCoeffsFromEigen(x, y, 0, O));
+        }
+
+        const poly = generateConePolyhedron(segments);
+
+        for(let i=1; i<coeffs.length; i++) {
+            const cAi = coeffs[i];
+            const nX = cA0.x - cAi.x;
+            const nY = cA0.y - cAi.y;
+            const nZ = cA0.z - cAi.z;
+            const nW = cA0.w - cAi.w;
+            const normal = new THREE.Vector3(nX, nY, nZ);
+            
+            const len = normal.length();
+            if(len < 1e-9) continue;
+            
+            const centerVal = (normal.y * 0.25 + nW) / len;
+            if (centerVal < -0.8) continue; 
+            if (centerVal > 0.8) return new THREE.BufferGeometry(); 
+
+            poly.clip(normal, nW);
+            if(poly.vertices.length === 0) break;
+        }
+        return poly.toBufferGeometry();
+    }
+
+    // --- 5. Interaction ---
+
+    function update() {
+        const nInput = document.getElementById('nInput');
+        const loading = document.getElementById('loading');
+        const stats = document.getElementById('statsOutput');
+        
+        const N = parseInt(nInput.value) || 10;
+        const Segs = parseInt(256) || 64;
+
+        loading.style.display = 'block';
+        
+        setTimeout(() => {
+            const start = performance.now();
+            if(currentMesh) {
+                scene.remove(currentMesh);
+                currentMesh.geometry.dispose();
+                currentMesh.material.dispose();
+                currentMesh = null;
+            }
+            if(currentEdges) {
+                scene.remove(currentEdges);
+                currentEdges.geometry.dispose();
+                currentEdges.material.dispose();
+                currentEdges = null;
+            }
+
+            const geo = generateVoronoiGeometry(N, Segs);
+            geo.computeVertexNormals();
+
+            const mat = new THREE.MeshStandardMaterial({
+                vertexColors: true,
+                side: THREE.DoubleSide,
+                roughness: 0.4,
+                metalness: 0.1,
+                transparent: true,
+                opacity: 0.9
+            });
+
+            currentMesh = new THREE.Mesh(geo, mat);
+            scene.add(currentMesh);
+
+            // Create an edges overlay to emphasize polyhedron edges
+            try {
+                const edgesGeo = new THREE.EdgesGeometry(geo);
+                const edgesMat = new THREE.LineBasicMaterial({ color: 0x003300, linewidth: 1, transparent: true, opacity: 0.95 });
+                currentEdges = new THREE.LineSegments(edgesGeo, edgesMat);
+                currentEdges.renderOrder = 1; // render on top of mesh
+                scene.add(currentEdges);
+            } catch (e) {
+                console.warn('Edge overlay failed:', e);
+            }
+
+            const end = performance.now();
+            loading.style.display = 'none';
+            stats.innerText = `Vertices: ${geo.attributes.position.count} | Time: ${((end-start)/1000).toFixed(2)}s`;
+            
+        }, 50);
+    }
+
+    // --- Save Image Function ---
+    function saveImage() {
+        // Ensure the scene is rendered before capturing
+        renderer.render(scene, camera);
+        
+        const link = document.createElement('a');
+        link.download = 'polyhedral_voronoi.png';
+        link.href = renderer.domElement.toDataURL('image/png');
+        link.click();
+    }
+
+    // --- Save HTML Function (Fix) ---
+    function saveHTML() {
+        if (!currentMesh) {
+            alert("No geometry generated yet.");
+            return;
+        }
+
+        // 1. Extract Geometry Data
+        const geo = currentMesh.geometry;
+        const positions = Array.from(geo.attributes.position.array);
+        const normals = Array.from(geo.attributes.normal.array);
+        const colors = Array.from(geo.attributes.color.array);
+        
+        const camPos = camera.position.toArray();
+        const camTarget = controls.target.toArray();
+
+        // 2. Create the Export Content
+        // This template creates a static viewer with the exact mesh data embedded
+        const exportContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Saved Voronoi Cell</title>
+    <style>body{margin:0;overflow:hidden;background:#f5f5f5;}</style>
+</head>
+<body>
+<script type="importmap">
+  { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
+<\/script>
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // --- Data Embed ---
+    const posData = ${JSON.stringify(positions)};
+    const normData = ${JSON.stringify(normals)};
+    const colData = ${JSON.stringify(colors)};
+
+    // --- Scene Setup ---
+    const scene = new THREE.Scene(); scene.background = new THREE.Color(0xf5f5f5);
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.01, 100);
+    camera.position.fromArray(${JSON.stringify(camPos)});
+    
+    const renderer = new THREE.WebGLRenderer({antialias:true});
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+    
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.fromArray(${JSON.stringify(camTarget)}); 
+    controls.update();
+
+    // --- Lights ---
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const dl = new THREE.DirectionalLight(0xffffff, 0.7); dl.position.set(5,10,7); scene.add(dl);
+    const dl2 = new THREE.DirectionalLight(0xffffff, 0.3); dl2.position.set(-5,5,-5); scene.add(dl2);
+
+    // --- Reconstruct Voronoi Mesh ---
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(posData, 3));
+    geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normData, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colData, 3));
+
+    const material = new THREE.MeshStandardMaterial({
+        vertexColors: true, side: THREE.DoubleSide,
+        roughness: 0.4, metalness: 0.1, transparent: true, opacity: 0.9
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    scene.add(mesh);
+
+    // Edges overlay for exported scene
+    try {
+        const edgesGeometry = new THREE.EdgesGeometry(geometry);
+        const edgesMaterial = new THREE.LineBasicMaterial({ color: 0x003300, linewidth: 1, transparent: true, opacity: 0.95 });
+        scene.add(new THREE.LineSegments(edgesGeometry, edgesMaterial));
+    } catch (e) {
+        console.warn('Could not create edges for export:', e);
+    }
+
+    // --- Reconstruct Ghost Cone ---
+    const shellGeom = new THREE.ConeGeometry(0.5, 0.5, 128, 1, true);
+    shellGeom.rotateX(Math.PI); shellGeom.translate(0, 0.25, 0);
+    const shellMat = new THREE.MeshBasicMaterial({ color: 0xaaaaaa, transparent: true, opacity: 0.08, side: THREE.DoubleSide, depthWrite: false });
+    scene.add(new THREE.Mesh(shellGeom, shellMat));
+
+    // --- Loop ---
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+    function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
+    animate();
+<\/script></body></html>`;
+
+        // 3. Download File
+        const blob = new Blob([exportContent], {type: 'text/html'});
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'voronoi_cell_static.html';
+        link.click();
+    }
+
+    // --- Event Listeners ---
+    document.getElementById('btnSaveImage').addEventListener('click', saveImage);
+    document.getElementById('btnSaveHTML').addEventListener('click', saveHTML);
+
+    document.getElementById('btnGen').addEventListener('click', update);
+    document.addEventListener('keypress', (e) => { if(e.key === 'Enter') update(); });
+    
+    update();
+
+    function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+    }
+    animate();
+
+</script>
+</body>
+</html>
