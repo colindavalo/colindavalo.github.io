@@ -52,7 +52,7 @@
     </p>
     
     <div class="control-group">
-        <label>N (Size of the box in the exponentioal of tthe Weyl chamber on which the distribution if computed (In average there will be $N^2$ horofunctions)):</label>
+        <label>N (Size of the box in the exponential of the Weyl chamber on which the distribution if computed (In average there will be $N^2$ horofunctions)):</label>
         <input type="number" id="nInput" value="100" min="50" max="500" step="50">
     </div>
 
@@ -341,6 +341,7 @@
     }
 
     let currentMesh = null;
+    let currentEdges = null;
 
     function generateVoronoiGeometry(N, segments) {
         const coeffs = [];
@@ -389,7 +390,7 @@
         const stats = document.getElementById('statsOutput');
         
         const N = parseInt(nInput.value) || 10;
-        const Segs = parseInt(128) || 64;
+        const Segs = parseInt(256) || 64;
 
         loading.style.display = 'block';
         
@@ -399,6 +400,13 @@
                 scene.remove(currentMesh);
                 currentMesh.geometry.dispose();
                 currentMesh.material.dispose();
+                currentMesh = null;
+            }
+            if(currentEdges) {
+                scene.remove(currentEdges);
+                currentEdges.geometry.dispose();
+                currentEdges.material.dispose();
+                currentEdges = null;
             }
 
             const geo = generateVoronoiGeometry(N, Segs);
@@ -415,6 +423,17 @@
 
             currentMesh = new THREE.Mesh(geo, mat);
             scene.add(currentMesh);
+
+            // Create an edges overlay to emphasize polyhedron edges
+            try {
+                const edgesGeo = new THREE.EdgesGeometry(geo);
+                const edgesMat = new THREE.LineBasicMaterial({ color: 0x003300, linewidth: 1, transparent: true, opacity: 0.95 });
+                currentEdges = new THREE.LineSegments(edgesGeo, edgesMat);
+                currentEdges.renderOrder = 1; // render on top of mesh
+                scene.add(currentEdges);
+            } catch (e) {
+                console.warn('Edge overlay failed:', e);
+            }
 
             const end = performance.now();
             loading.style.display = 'none';
@@ -501,7 +520,17 @@
         vertexColors: true, side: THREE.DoubleSide,
         roughness: 0.4, metalness: 0.1, transparent: true, opacity: 0.9
     });
-    scene.add(new THREE.Mesh(geometry, material));
+    const mesh = new THREE.Mesh(geometry, material);
+    scene.add(mesh);
+
+    // Edges overlay for exported scene
+    try {
+        const edgesGeometry = new THREE.EdgesGeometry(geometry);
+        const edgesMaterial = new THREE.LineBasicMaterial({ color: 0x003300, linewidth: 1, transparent: true, opacity: 0.95 });
+        scene.add(new THREE.LineSegments(edgesGeometry, edgesMaterial));
+    } catch (e) {
+        console.warn('Could not create edges for export:', e);
+    }
 
     // --- Reconstruct Ghost Cone ---
     const shellGeom = new THREE.ConeGeometry(0.5, 0.5, 128, 1, true);
