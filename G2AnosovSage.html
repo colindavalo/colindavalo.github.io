@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Slodowy slices in G_2': Anosov properties </title>
+    
+    <script src="https://sagecell.sagemath.org/static/embedded_sagecell.js"></script>
+    <script>
+    $(function () {
+        sagecell.makeSagecell({
+            inputLocation:  '.compute',
+            languages:       ['sage'],
+            evalButtonText:  'Execute'
+        });
+    });
+    </script>
+
+    <style>
+        body { font-family: sans-serif; margin: 40px; background-color: #f4f4f9; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Matrix determinant computations with Sagemath</h1>
+
+    <div class="compute">
+<script type="text/x-sage">
+### G_2' Slodowy slices II###
+# Colin Davalo and Parker Evans
+
+pretty_print("Proof of Lemma 2.10")
+var('α_0', domain='complex')
+
+ψ=matrix([[0,1,0,0,0,0,0],
+          [1,0,α_0.conjugate(),0,0,0,0],
+          [0,α_0,0,I*sqrt(2),0,0,0],
+          [0,0,-I*sqrt(2),0,I*sqrt(2),0,0],
+          [0,0,0,-I*sqrt(2),0,α_0.conjugate(),0],
+          [0,0,0,0,α_0,0,1],
+          [0,0,0,0,0,1,0]])
+pretty_print("ψ=",ψ)
+
+U=1/sqrt(2)*matrix([[0,0,I/sqrt(2),-1,-I/sqrt(2),0,0],
+          [0,0,I/sqrt(2),1,-I/sqrt(2),0,0],
+          [0,0,1,0,1,0,0],
+          [1,1,0,0,0,0,0],
+          [1,-1,0,0,0,0,0],
+          [0,0,0,0,0,1,1],
+          [0,0,0,0,0,1,-1]])
+pretty_print("U=",U)
+pretty_print("UψU^{-1}=",U*ψ*U.conjugate_transpose())
+
+pretty_print("Computation for the cones C")
+Q= diagonal_matrix([1,-1,-1,-1,-1,-1,-1])
+
+#The matrix A before removing B
+pretty_print(U*ψ*U.conjugate_transpose()-2*identity_matrix(7))
+Aprime=(U*ψ*U.conjugate_transpose()-2*identity_matrix(7)).submatrix(1, 1)
+pretty_print("A'=", Aprime)
+pretty_print("determinant of A': ",Aprime.determinant())
+
+var('x')
+P = 2*x^4 - 30*x^2 + 72
+roots = P.roots()
+roots_exact = [r[0] for r in roots]
+print("The polynomial is : ", P)
+print("Exact roots : ", roots_exact)
+
+pretty_print("Computation for the cones C")
+Qprime= diagonal_matrix([1,-1,-1,-2,-2,-2,-2])
+
+M=U*ψ*U.conjugate_transpose()*Qprime+Qprime*U*ψ*U.conjugate_transpose()-7/2*Qprime
+pretty_print("M=",M)
+pretty_print("determinant of M: ",M.determinant())
+
+var('x')
+P = 2646*x^4 - 50589*x^2 + 114345
+roots = P.roots()
+roots_exact = [r[0] for r in roots]
+roots_approx = [r.n() for r in roots_exact]
+print("The polynomial is : ", P)
+print("Exact roots : ", roots_exact)
+print("Approximated values : ", roots_approx)
+
+pretty_print("Proof of Lemma 2.17")
+var('β_0', domain='complex')
+var('δ_0', domain='complex')
+
+ψ2=matrix([[0,β_0.conjugate(),0,0,0,δ_0,0],
+          [β_0,0,1,0,0,0,δ_0],
+          [0,1,0,I*sqrt(2)*β_0.conjugate(),0,0,0],
+          [0,0,-I*sqrt(2)*β_0,0,I*sqrt(2)*β_0.conjugate(),0,0],
+          [0,0,0,-I*sqrt(2)*β_0,0,1,0],
+          [δ_0.conjugate(),0,0,0,1,0,β_0.conjugate()],
+          [0,δ_0.conjugate(),0,0,0,β_0,0]])
+pretty_print("ψ=",ψ2)
+
+U2=1/sqrt(2)*matrix([[0,1,1,0,0,0,0],
+          [0,0,0,0,1,1,0],
+          [0,1,-1,0,0,0,0],
+          [0,0,0,0,1,-1,0],
+          [sqrt(2),0,0,0,0,0,0],
+          [0,0,0,sqrt(2),0,0,0],
+          [0,0,0,0,0,0,sqrt(2)]])
+pretty_print("U=",U2)
+pretty_print("UψU^{-1}=",U2*ψ2*U2.conjugate_transpose())
+
+Q= diagonal_matrix([1,1,-1,-1,-1,-1,-1])
+
+#La matrice A avant de retirer B
+pretty_print(U2*ψ2*U2.conjugate_transpose()-identity_matrix(7))
+Aprime=(U2*ψ2*U2.conjugate_transpose()-identity_matrix(7)).submatrix(2, 2)
+pretty_print("A'=", Aprime)
+pretty_print("determinant of A': ",Aprime.determinant())
+
+var('x')
+P = -5/4*x^4 - 6*x^2 + 4
+
+</script>
+    </div>
+</div>
+
+</body>
+</html>
