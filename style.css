@@ -98,51 +98,6 @@ img, svg { display: block; max-width: 100%; }
 .paper-links a, .inline-links a { color: var(--ink); font-size: .75rem; font-weight: 750; letter-spacing: .06em; text-decoration: none; text-transform: uppercase; }
 .paper-links a::after, .inline-links a::after { content: " ↗"; color: var(--accent); }
 
-/* Each drawing describes a construction from the corresponding paper. */
-.visual-dirichlet img { width: 100%; height: auto; }
-.surface, .surface-back, .fibers path, .flags path { fill: none; stroke: currentColor; }
-.surface { stroke-width: 2.4; }
-.surface-back { opacity: .35; }
-.fibers path { stroke: var(--blue); stroke-width: 1.1; stroke-dasharray: 4 3; }
-.flags circle { fill: var(--accent); }
-.flags path { stroke-width: 1.6; }
-.visual-barbot .flags { animation: flagLift 5s ease-in-out infinite; }
-.visual-g2 img { width: 100%; height: auto; }
-.domain { stroke: currentColor; stroke-width: 1.5; }
-.outer { fill: rgba(18,107,86,.07); }
-.inner { fill: var(--paper); }
-.fiber-lines path { fill: none; stroke: var(--blue); stroke-dasharray: 3 4; opacity: .7; }
-.base-loop { fill: none; stroke: var(--accent); stroke-width: 2.4; }
-.visual-einstein .inner { transform-box: fill-box; transform-origin: center; animation: domainBreathe 5s ease-in-out infinite; }
-.quadrics ellipse, .pencil-axis { fill: none; stroke: currentColor; }
-.quadrics ellipse:nth-child(2) { stroke: var(--blue); stroke-width: 1.8; }
-.base-point { fill: var(--accent); }
-.pencil-axis { stroke-dasharray: 2 5; opacity: .45; }
-.visual-pencils .quadrics { transform-box: fill-box; transform-origin: center; animation: pencilShift 7s ease-in-out infinite; }
-.boundary, .immersed, .normal-rays path { fill: none; stroke: currentColor; }
-.boundary { opacity: .35; stroke-dasharray: 5 5; }
-.immersed { stroke-width: 2.6; }
-.normal-rays path { stroke: var(--blue); stroke-width: 1.1; }
-.boundary-points circle { fill: var(--blue); }
-.visual-immersion .normal-rays { animation: rayFade 4s ease-in-out infinite; }
-.limit-curve, .hyperconvex-lines path, .symplectic-mark { fill: none; stroke: currentColor; }
-.limit-curve { stroke-width: 2; }
-.hyperconvex-lines path { stroke: var(--blue); opacity: .45; }
-.limit-points circle { fill: var(--accent); }
-.symplectic-mark { stroke-width: 2; }
-.visual-sp4 .hyperconvex-lines { animation: lineFocus 4.5s ease-in-out infinite; }
-.manifold { fill: rgba(18,107,86,.08); stroke: currentColor; stroke-width: 1.8; }
-.charts path { fill: rgba(255,255,255,.58); stroke: var(--blue); }
-.transition-arrows path { fill: none; stroke: var(--accent); stroke-width: 1.5; }
-.visual-projective .charts path:nth-child(2) { animation: chartEmphasis 4s ease-in-out infinite; }
-
-@keyframes flagLift { 50% { transform: translateY(-5px); } }
-@keyframes domainBreathe { 50% { transform: scale(1.08); } }
-@keyframes pencilShift { 50% { transform: rotate(7deg); } }
-@keyframes rayFade { 50% { opacity: .35; } }
-@keyframes lineFocus { 50% { opacity: .25; } }
-@keyframes chartEmphasis { 50% { fill: rgba(18,107,86,.18); } }
-
 .lower-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; margin-bottom: 6rem; background: var(--line); border: 1px solid var(--line); }
 .text-panel { min-height: 345px; padding: clamp(1.6rem, 3vw, 2.6rem); background: var(--white); }
 .text-panel h2 { margin: 0 0 1.2rem; font-family: var(--serif); font-size: clamp(1.8rem, 3vw, 2.55rem); font-weight: 400; letter-spacing: -.035em; line-height: 1.15; }
@@ -212,3 +167,32 @@ img, svg { display: block; max-width: 100%; }
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* Compact paper list on the home page and the separate illustrated list. */
+.section-heading { flex-wrap: wrap; gap: .8rem 1.5rem; }
+.illustrated-link { margin-left: auto; color: var(--accent-dark); font-size: .8rem; font-weight: 700; text-decoration: none; }
+.illustrated-link:hover { text-decoration: underline; }
+.paper-card-compact { display: block; padding: 1.35rem 0; }
+.paper-card-compact .paper-copy h4 { font-size: clamp(1.35rem, 2vw, 1.7rem); }
+.paper-card-compact .paper-meta { justify-content: flex-start; margin-bottom: .35rem; }
+.paper-card-compact .paper-links { margin-top: .6rem; }
+.illustrated-page { width: min(1080px, calc(100% - clamp(2.4rem, 8vw, 9rem))); margin: 0 auto; }
+.illustrated-intro { padding: clamp(4rem, 7vw, 6.5rem) 0 2.5rem; border-bottom: 1px solid var(--line); }
+.illustrated-intro h1 { margin: 0 0 1rem; font-family: var(--serif); font-size: clamp(3rem, 6vw, 5.5rem); font-weight: 400; letter-spacing: -.05em; line-height: 1; }
+.illustrated-intro p:not(.eyebrow) { max-width: 700px; color: var(--muted); }
+.illustrated-intro a { color: var(--accent-dark); font-size: .8rem; font-weight: 700; text-decoration: none; }
+.illustrated-papers { padding-top: 3rem; }
+.illustrated-papers .paper-visual { min-height: 160px; padding: .6rem; background: white; }
+.illustrated-papers .paper-visual img { width: 100%; max-height: 220px; object-fit: contain; }
+.illustrated-papers .visual-dirichlet img { max-height: 220px; }
+.illustrated-papers .paper-card-no-image { grid-template-columns: 1fr; }
+@media (max-width: 700px) {
+  .illustrated-page { width: min(100% - 2rem, 620px); }
+  .illustrated-link { margin-left: 0; }
+  .illustrated-papers .paper-visual { aspect-ratio: auto; }
+}
+@media (max-width: 700px) {
+  .illustrated-page ~ .site-footer { width: min(100% - 2rem, 620px); }
+  .site-header:has(+ .illustrated-page) .top-nav { flex-wrap: wrap; justify-content: flex-end; row-gap: .25rem; }
+}
+.illustrated-papers .paper-card:nth-child(even) .paper-visual { background: white; }
