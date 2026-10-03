@@ -141,7 +141,7 @@ img, svg { display: block; max-width: 100%; }
 
 @media (max-width: 700px) {
   .site-header { height: auto; min-height: 64px; padding-block: .8rem; }
-  .top-nav { gap: .8rem; font-size: .76rem; }
+  .top-nav { flex-wrap: wrap; justify-content: flex-end; gap: .25rem .8rem; font-size: .76rem; }
   .page-shell, .site-footer, .gallery-page { width: min(100% - 2rem, 620px); }
   .profile { grid-template-columns: 108px 1fr; column-gap: 1.1rem; }
   .profile h1 { font-size: 2.7rem; }
