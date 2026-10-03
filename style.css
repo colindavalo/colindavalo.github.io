@@ -196,3 +196,7 @@ img, svg { display: block; max-width: 100%; }
   .site-header:has(+ .illustrated-page) .top-nav { flex-wrap: wrap; justify-content: flex-end; row-gap: .25rem; }
 }
 .illustrated-papers .paper-card:nth-child(even) .paper-visual { background: white; }
+.paper-abstract { max-width: 740px; margin: .85rem 0 1.15rem; color: #40514b; font-size: .9rem; line-height: 1.65; }
+.abstract-label { display: block; margin-bottom: .35rem; color: var(--muted); font-size: .67rem; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; }
+
+.illustrated-papers .paper-visual, .illustrated-papers .paper-copy { align-self: start; }
