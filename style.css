@@ -38,14 +38,12 @@ img, svg { display: block; max-width: 100%; }
   height: 72px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   padding: 0 clamp(1.2rem, 4vw, 4.5rem);
   background: color-mix(in srgb, var(--paper) 92%, transparent);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(14px);
 }
-.wordmark { display: flex; align-items: center; gap: .7rem; font-weight: 650; text-decoration: none; letter-spacing: -.02em; }
-.wordmark-mark { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--ink); border-radius: 50%; font-family: var(--serif); font-size: .72rem; letter-spacing: .03em; }
 .top-nav { display: flex; align-items: center; gap: clamp(.85rem, 2.2vw, 2rem); font-size: .88rem; font-weight: 560; }
 .top-nav a { text-decoration: none; }
 .language-link { padding: .25rem .48rem; border: 1px solid var(--line); border-radius: 4px; }
@@ -143,9 +141,7 @@ img, svg { display: block; max-width: 100%; }
 
 @media (max-width: 700px) {
   .site-header { height: auto; min-height: 64px; padding-block: .8rem; }
-  .wordmark > span:last-child { display: none; }
   .top-nav { gap: .8rem; font-size: .76rem; }
-  .top-nav a:first-child { display: none; }
   .page-shell, .site-footer, .gallery-page { width: min(100% - 2rem, 620px); }
   .profile { grid-template-columns: 108px 1fr; column-gap: 1.1rem; }
   .profile h1 { font-size: 2.7rem; }
