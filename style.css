@@ -102,7 +102,7 @@ img, svg { display: block; max-width: 100%; }
 .text-panel > p:not(.eyebrow) { color: var(--muted); font-size: .9rem; }
 .inline-links { display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; margin-top: 1.5rem; }
 .teaching-list { margin: 0; padding: 0; list-style: none; }
-.teaching-list li { display: grid; grid-template-columns: 60px 1fr; gap: .15rem 1rem; padding: 1rem 0; border-bottom: 1px solid var(--line); }
+.teaching-list li { display: grid; grid-template-columns: 100px 1fr; gap: .15rem 1rem; padding: 1rem 0; border-bottom: 1px solid var(--line); }
 .teaching-list span { grid-row: 1 / 3; color: var(--accent); font-size: .72rem; font-weight: 700; }
 .teaching-list a { font-family: var(--serif); line-height: 1.25; }
 .teaching-list small { color: var(--muted); font-size: .73rem; }
@@ -196,3 +196,16 @@ img, svg { display: block; max-width: 100%; }
 .abstract-label { display: block; margin-bottom: .35rem; color: var(--muted); font-size: .67rem; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; }
 
 .illustrated-papers .paper-visual, .illustrated-papers .paper-copy { align-self: start; }
+
+/* Detailed illustration project */
+.visual-project-page .eyebrow a { text-decoration: none; }
+.visual-project-page .gallery-intro { padding-bottom: 2rem; border-bottom: 1px solid var(--line); }
+.visual-entry { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(250px, .9fr); gap: clamp(1.5rem, 4vw, 4rem); padding: 2.5rem 0; border-bottom: 1px solid var(--line); align-items: start; }
+.visual-entry h2 { margin: 0 0 1rem; font-family: var(--serif); font-size: clamp(1.8rem, 3vw, 2.5rem); font-weight: 400; letter-spacing: -.035em; line-height: 1.15; }
+.visual-entry p { margin: 0 0 1rem; color: #40514b; font-size: .96rem; }
+.visual-entry-image { display: block; background: var(--white); border: 1px solid var(--line); text-decoration: none; }
+.visual-entry-image img { width: 100%; aspect-ratio: 4 / 3; object-fit: contain; background: white; }
+.visual-entry-image span { display: block; padding: .7rem 1rem; color: var(--accent-dark); font-size: .75rem; font-weight: 750; letter-spacing: .05em; text-transform: uppercase; }
+@media (max-width: 700px) {
+  .visual-entry { grid-template-columns: 1fr; }
+}
