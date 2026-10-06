@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex, nofollow">
+  <title>Dumas–Wolf · Polynomial laboratory</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="vendor/katex/katex.min.css"><link rel="icon" href="data:,">
+</head>
+<body>
+  <a class="site-return" href="../picturesSecret.html">← Visual projects</a>
+  <header>
+    <div><p class="eyebrow">GEOMETRY LAB / 01</p><h1>From a polynomial<br>to a projective polygon.</h1>
+    <p class="subtitle">The Dumas–Wolf correspondence · cubic differentials on ℂ</p></div>
+    <div class="header-note"><span class="live-dot"></span> PYTHON IN YOUR BROWSER<br><span>Wang equation + affine-sphere transport</span></div>
+  </header>
+  <nav class="mode-switch" aria-label="Higgs bundle family"><button id="mode-hitchin" class="active">Hitchin · Dumas–Wolf</button><button id="mode-barbot">Barbot · limit map</button></nav>
+  <main>
+    <aside class="controls">
+      <div class="section-label">01 / DIFFERENTIAL</div>
+      <h2>Choose your roots</h2>
+      <div id="formula" class="formula">q(z) = 1</div>
+      <label class="field">Example<select id="preset"><option value="constant">Constant · triangle</option><option value="linear">z · square</option><option value="quadratic">z² · pentagon</option><option value="split">z² − 1 · split roots</option><option value="asymmetric">Three asymmetric roots</option><option value="custom" disabled>Custom polynomial</option></select></label>
+      <label class="field degree-field">Degree <input id="degree" type="number" min="0" max="8" step="1" value="0"></label>
+      <div class="root-head"><span>ROOT</span><span>REAL</span><span>IMAGINARY</span></div>
+      <div id="roots"></div>
+      <p class="hint">Drag roots in the metric plot. Repeated roots are allowed; degree zero is q = 1. All polynomials are monic.</p>
+      <div class="divider"></div>
+      <div class="section-label">02 / COMPUTATION</div>
+      <div class="field-pair"><label class="field">Domain ±R<input id="domain" type="number" min="2" max="20" step="0.5" value="6"></label><label class="field"><span id="cutoff-label">Ray cutoff</span><input id="cutoff" type="number" min="0.25" step="0.25" value="4.5"></label></div>
+      <div class="field-pair"><label class="field">Metric grid<select id="grid"><option value="65">65 × 65 · preview</option><option value="129" selected>129 × 129</option><option value="193">193 × 193</option><option value="257">257 × 257 · fine</option><option value="321">321 × 321</option></select></label><label class="field">Rays<select id="ray-count"><option value="60">60</option><option value="120" selected>120</option><option value="240">240</option><option value="360">360</option></select></label></div>
+      <label class="check"><input id="auto" type="checkbox" checked> Solve after a root moves</label>
+      <div class="actions"><button id="solve" class="primary">Solve & draw <span>↗</span></button><button id="cancel" hidden>Cancel</button></div>
+      <div id="status" role="status">Starting the constant reference…</div>
+      <div id="warnings" role="note"></div>
+    </aside>
+    <div class="workspace">
+      <div id="barbot-controls" hidden>
+        <label>Domain paths <select id="path-family"><option value="compare">Compare both</option><option value="straight">Straight rays</option><option value="geodesic">Metric geodesics</option></select></label>
+        <label>Affine chart <select id="chart"><option value="0">X₀ ≠ 0</option><option value="1">X₁ ≠ 0</option><option value="2">X₂ ≠ 0</option></select></label>
+        <label>View ± <input id="chart-range" type="number" value="3" min="0.25" max="100" step="0.5"></label>
+        <label><input id="segments" type="checkbox" checked> Projective segments</label>
+        <span id="chart-status">Points outside the view are omitted.</span>
+      </div><div class="plot-grid">
+        <section class="plot-card">
+          <div class="plot-heading"><div><div class="section-label">THE DOMAIN</div><h2>Metric on ℂ</h2></div><select id="layer" aria-label="Metric color layer"><option value="w">log metric · w</option><option value="curvature">Curvature · K</option></select></div>
+          <canvas id="metric" aria-label="Metric heat map with draggable complex roots"></canvas>
+          <div class="colorbar"><span id="color-min"></span><div></div><span id="color-max"></span><span id="color-name">w</span></div>
+          <div class="plot-caption">g = eʷ |dz|² <span>Drag a numbered root · click a ray to inspect</span></div>
+        </section>
+        <section class="plot-card">
+          <div class="plot-heading"><div><div class="section-label">THE IMAGE</div><h2 id="image-title">Polygon in ℝℙ²</h2></div><span id="vertex-count" class="badge">3 vertices expected</span></div>
+          <canvas id="polygon" aria-label="Projective affine-sphere samples and estimated limiting polygon"></canvas>
+          <div class="legend" id="legend"><span><i class="teal"></i>Finite-radius curve</span><span><i class="orange"></i>Vertex estimates</span><span><i class="violet"></i>Selected ray</span></div>
+          <div class="plot-caption" id="chart-caption">Chart: (f₁/f₀, f₂/f₀) <span>Frame fixed at the origin</span></div>
+        </section>
+      </div>
+      <section class="inspector">
+        <div><div class="section-label">03 / APPROACH TO INFINITY</div><label for="radius-slider"><span id="parameter-label">Viewing radius</span> <strong id="radius-value">—</strong></label></div>
+        <input id="radius-slider" type="range" min="0" max="64" value="64" aria-label="Viewing radius">
+        <button id="play" aria-label="Animate radius">▶ Play</button>
+        <label class="angle-field">Ray <input id="angle" type="range" min="0" max="119" value="0"><span id="angle-value">0°</span></label>
+      </section>
+      <section class="diagnostics">
+        <div><span>NEWTON RESIDUAL</span><strong id="residual">—</strong><small>relative discrete residual</small></div>
+        <div><span id="drift-title">VERTEX DRIFT</span><strong id="drift">—</strong><small id="drift-label">last 20% of radius</small></div>
+        <div><span>COMPUTE TIME</span><strong id="elapsed">—</strong><small id="mesh-info">metric + transport</small></div>
+        <div class="export"><button id="export-json" disabled>Export experiment ↓</button><button id="export-png" disabled>Save polygon PNG ↓</button></div>
+      </section>
+      <section id="barbot-notes" class="notes math-notes" hidden>
+        <h3>Barbot construction and limit map</h3>
+        <p>For a nonzero monic polynomial \(t\), we use</p>
+        \[
+        \Phi=\begin{pmatrix}0&t&0\\0&0&t\\1&0&0\end{pmatrix}dz,
+        \qquad H=\operatorname{diag}(h,1,h^{-1}).
+        \]
+        <p>Writing \(w=-2\log h\), the metric equation and its asymptotics are</p>
+        \[
+        \Delta w=8e^w-8|t|^2e^{-w/2},\qquad
+        w\sim\frac43\log|t|,\qquad g=e^w|dz|^2.
+        \]
+        <p>For \(t\equiv1\), we have \(h\equiv1\). In an ordered, \(H\)-orthonormal eigenbasis of \(\psi_0(v)\), the cone is \(x_1^2\ge x_2^2+x_3^2\). Its distinguished centre is the positive eigendirection. If \(P_\gamma(L)\) transports vectors from the origin to the endpoint, the plotted approximation to the limit map is</p>
+        \[
+        \xi_L(\theta)=\bigl[P_{\gamma_\theta}(L)^{-1}c_+(\dot\gamma_\theta(L))\bigr]
+        \in\mathbb{RP}^2.
+        \]
+        <p><strong>The right picture shows only metric-geodesic samples.</strong> Consecutive samples are joined by a projective segment. Neighbours on the same projective line determine its direction; tightly clustered vertex samples use a short segment. Ambiguous sparse cases use the continuous homogeneous lifts supplied by transport. Across the closing seam these lifts are antipodal. This is a reconstruction heuristic: increase the number of rays when segment choices remain uncertain.</p>
+        <p>For chosen lifts \(p,q\), the segment is \([(1-s)p+sq]\), \(0\le s\le1\). If its chart denominator changes sign, we split it at infinity and clip each visible piece separately. No interior is filled. Switch affine charts, adjust the view, or turn segments off to inspect the original samples.</p>
+        <p>The slider uses Euclidean path length \(L\); the curves are reparametrized geodesics of \(g\), with metric arclength exported separately. Cones are nested along metric geodesics, and only asymptotically nested along straight rays. Straight rays remain available in the <em>domain</em> comparison only. Polygonality is work in progress; these finite-cutoff samples are not a certified limiting curve.</p>
+      </section>
+      <details class="notes math-notes" id="hitchin-notes"><summary>Equations, accuracy & reading the picture</summary>
+        <div class="notes-grid"><div><h3>The reference construction</h3>
+        <p>For \(C=q(z)\,dz^3\), the Blaschke metric \(g=e^w|dz|^2\) satisfies</p>
+        \[\Delta w=2e^w-4|q|^2e^{-2w}.\]
+        <p>We integrate the real affine-sphere frame along equally spaced straight rays from \(z=0\). A degree-\(d\) polynomial gives a convex polygon with \(d+3\) vertices.</p>
+        <p>For \(q\equiv1\), \(w=\frac13\log2\) exactly. The limiting triangle has circumradius \(\sqrt2\) in this normalization.</p></div>
+        <div><h3>Finite computations</h3>
+        <p>The square-domain boundary data are \(w=\frac13\log(2|q|^2)\). The orange polygon joins finite-cutoff samples on \(d+3\) asymptotic sector-centre rays. The teal curve joins uniformly sampled rays at the selected radius.</p>
+        <p>Increase grid resolution, domain, and cutoff to check stability. Vertex drift measures radius change only, not total numerical error. The initial frame is fixed, and ill-conditioned full frames are never inverted.</p>
+        <p><a href="https://arxiv.org/abs/1407.8149v3" target="_blank" rel="noopener">Dumas & Wolf · equations (4), (6), Theorem A ↗</a></p></div></div>
+      </details>
+    </div>
+  </main>
+  <footer>POLYNOMIAL LABORATORY <span>Hitchin reference / Barbot experiment</span></footer>
+  <script src="vendor/katex/katex.min.js"></script>
+  <script src="vendor/katex/auto-render.min.js"></script>
+  <script src="projective.js"></script>
+  <script src="browser-bridge.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
