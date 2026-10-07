@@ -2,6 +2,21 @@
 'use strict';
 (() => {
   const originalFetch = window.fetch.bind(window);
+  if (location.protocol === 'file:') {
+    const message = 'This visualization needs a local HTTP server. From the Site personnel folder, run: python3 -m http.server 8765 --bind 127.0.0.1. Then open http://127.0.0.1:8765/picturesSecret.html';
+    const notice = document.createElement('p');
+    notice.className = 'local-preview-notice';
+    notice.textContent = message;
+    document.body.prepend(notice);
+    window.fetch = async (input, init) => {
+      const raw = typeof input === 'string' ? input : input.url;
+      if (raw.startsWith('api/')) return new Response(JSON.stringify({error: message}), {
+        status: 400, headers: {'Content-Type': 'application/json'}
+      });
+      return originalFetch(input, init);
+    };
+    return;
+  }
   const scriptUrl = document.currentScript.src;
   const apiPrefix = new URL('api/', scriptUrl).pathname;
   const worker = new Worker(new URL('barbot-worker.js', scriptUrl));
