@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 250" width="560" height="250">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#17221f"/></marker><marker id="arrg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#126b56"/></marker><marker id="arrb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3f6e85"/></marker><pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="7" stroke="#7b8a85" stroke-width="1.1"/></pattern></defs>
+<circle cx="110" cy="190" r="38" fill="white" stroke="#17221f" stroke-width="1.1"/>
+<circle cx="280" cy="50" r="38" fill="white" stroke="#17221f" stroke-width="1.1"/>
+<circle cx="450" cy="190" r="38" fill="white" stroke="#17221f" stroke-width="1.1"/>
+<path d="M156.0,190.0 Q280.0,189.9 404.0,190.0" fill="none" stroke="#126b56" stroke-width="1.8" marker-end="url(#arrg)"/>
+<path d="M414.5,160.8 Q365.0,120.0 315.5,79.2" fill="none" stroke="#3f6e85" stroke-width="1.8" marker-end="url(#arrb)"/>
+<path d="M244.5,79.2 Q195.0,120.0 145.5,160.8" fill="none" stroke="#3f6e85" stroke-width="1.8" marker-end="url(#arrb)"/>
+</svg>

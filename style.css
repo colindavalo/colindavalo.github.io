@@ -67,7 +67,7 @@ img, svg { display: block; max-width: 100%; }
 
 .content-column { min-width: 0; }
 .intro { padding: clamp(4.5rem, 8vw, 7.5rem) 0 clamp(5rem, 9vw, 8rem); border-bottom: 1px solid var(--line); }
-.intro h2 { max-width: 850px; margin: 0 0 2rem; font-family: var(--serif); font-size: clamp(2.8rem, 5.2vw, 5.25rem); font-weight: 400; letter-spacing: -.045em; line-height: 1.02; text-wrap: balance; }
+.intro h2 { max-width: 900px; margin: 0 0 2rem; font-family: var(--serif); font-size: clamp(2.3rem, 4.2vw, 4.1rem); font-weight: 400; letter-spacing: -.045em; line-height: 1.02; text-wrap: balance; }
 .intro > p:not(.eyebrow) { max-width: 770px; margin: 0; color: #3f504a; font-size: 1.05rem; }
 .topic-list { display: flex; flex-wrap: wrap; gap: .5rem; margin: 2rem 0 0; padding: 0; list-style: none; }
 .topic-list li { padding: .38rem .65rem; border: 1px solid #cadbd4; border-radius: 99px; background: #edf5f2; color: #43524d; font-size: .76rem; }
@@ -150,7 +150,7 @@ img, svg { display: block; max-width: 100%; }
   .position { font-size: .8rem; }
   .email { overflow-wrap: anywhere; font-size: .72rem; }
   .profile-links { flex-wrap: wrap; gap: .25rem 1rem; }
-  .intro h2 { font-size: 2.65rem; }
+  .intro h2 { font-size: 2.15rem; }
   .paper-card { grid-template-columns: 1fr; gap: 1.2rem; }
   .paper-visual { min-height: 0; aspect-ratio: 2.25 / 1; }
   .paper-visual svg { width: 86%; }
@@ -181,8 +181,8 @@ img, svg { display: block; max-width: 100%; }
 .illustrated-intro a { color: var(--accent-dark); font-size: .8rem; font-weight: 700; text-decoration: none; }
 .illustrated-papers { padding-top: 3rem; }
 .illustrated-papers .paper-visual { min-height: 160px; padding: .6rem; background: white; }
-.illustrated-papers .paper-visual img { width: 100%; max-height: 220px; object-fit: contain; }
-.illustrated-papers .visual-dirichlet img { max-height: 220px; }
+.illustrated-papers .paper-visual img { width: 100%; max-height: 300px; object-fit: contain; }
+.illustrated-papers .visual-dirichlet img { max-height: 300px; }
 .illustrated-papers .paper-card-no-image { grid-template-columns: 1fr; }
 @media (max-width: 700px) {
   .illustrated-page { width: min(100% - 2rem, 620px); }
@@ -211,3 +211,4 @@ img, svg { display: block; max-width: 100%; }
 @media (max-width: 700px) {
   .visual-entry { grid-template-columns: 1fr; }
 }
+@media (min-width: 701px) { .illustrated-papers .paper-card:not(.paper-card-no-image) { grid-template-columns: minmax(260px, 38%) minmax(0, 1fr); } }
