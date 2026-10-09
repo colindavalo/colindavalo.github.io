@@ -47,10 +47,11 @@ def browser_solve(payload, progress):
     return result
 `);
   })();
-  return ready;
+  try { return await ready; }
+  catch (error) { ready = undefined; throw error; }
 }
 
-self.onmessage = async ({data}) => {
+async function handleMessage({data}) {
   if (data.type !== 'solve') return;
   const {id, payload} = data;
   try {
@@ -58,11 +59,21 @@ self.onmessage = async ({data}) => {
     postMessage({type: 'ready', id});
     const progress = message => postMessage({type: 'progress', id, message});
     pyodide.registerJsModule('browser_progress', {progress});
-    pyodide.globals.set('browser_payload', pyodide.toPy(payload));
-    const result = await pyodide.runPythonAsync('import browser_progress\nbrowser_solve(browser_payload, browser_progress.progress)');
-    postMessage({type: 'complete', id, result: result.toJs({dict_converter: Object.fromEntries})});
-    result.destroy();
+    const input = pyodide.toPy(payload);
+    let result;
+    try {
+      pyodide.globals.set('browser_payload', input);
+      result = await pyodide.runPythonAsync('import browser_progress\nbrowser_solve(browser_payload, browser_progress.progress)');
+      postMessage({type: 'complete', id, result: result.toJs({dict_converter: Object.fromEntries})});
+    } finally {
+      pyodide.globals.delete('browser_payload');
+      input.destroy();
+      if (result) result.destroy();
+    }
   } catch (error) {
     postMessage({type: 'error', id, message: String(error.message || error)});
   }
-};
+}
+// Pyodide's globals and runPythonAsync must not be shared by overlapping jobs.
+let queue = Promise.resolve();
+self.onmessage = event => { queue = queue.then(() => handleMessage(event)); };

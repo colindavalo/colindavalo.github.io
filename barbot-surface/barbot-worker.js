@@ -78,7 +78,8 @@ def browser_holonomy():
     return dict(id=active_id, settings=active_settings, holonomy=active_holonomy)
 `);
   })();
-  return ready;
+  try { return await ready; }
+  catch (error) { ready = undefined; throw error; }
 }
 
 async function callPython(expression, payload) {
@@ -94,11 +95,11 @@ async function callPython(expression, payload) {
     if (proxy && typeof proxy.destroy === 'function') proxy.destroy();
     return result;
   } finally {
-    if (input) input.destroy();
+    if (input) { pyodide.globals.delete('browser_payload'); input.destroy(); }
   }
 }
 
-self.onmessage = async ({data}) => {
+async function handleMessage({data}) {
   const {id, type, payload} = data;
   try {
     await initialize(id);
@@ -120,4 +121,7 @@ self.onmessage = async ({data}) => {
   } catch (error) {
     postMessage({type: 'error', id, message: String(error.message || error)});
   }
-};
+}
+// Serialize Python calls, including activation, while the UI remains responsive.
+let queue = Promise.resolve();
+self.onmessage = event => { queue = queue.then(() => handleMessage(event)); };

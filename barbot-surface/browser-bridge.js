@@ -3,7 +3,7 @@
 (() => {
   const originalFetch = window.fetch.bind(window);
   if (location.protocol === 'file:') {
-    const message = 'This visualization needs a local HTTP server. From the Site personnel folder, run: python3 -m http.server 8765 --bind 127.0.0.1. Then open http://127.0.0.1:8765/picturesSecret.html';
+    const message = 'Open this visualization over HTTP. Double-click Preview-site.cmd in the site folder to start the local preview, and keep its window open.';
     const notice = document.createElement('p');
     notice.className = 'local-preview-notice';
     notice.textContent = message;

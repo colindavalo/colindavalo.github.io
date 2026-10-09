@@ -20,6 +20,11 @@ starts the next one. Fine mesh levels can take substantial time and memory in
 a browser. The supplied numerical relation error and finite sampling caveats
 remain essential when interpreting the plotted cloud.
 
+On Windows, double-click `../Preview-site.cmd` and keep its window open to
+open the local visual-project hub. Python requests in the worker are serialized
+to avoid overlapping initialization, sampling and recomputation. After a failed
+runtime download, a new request retries initialization.
+
 On 7 October 2026, the saved representation produced 20,000 projective points
 in the in-app browser over local HTTP. A level-4 recomputation activated a
 new representation and generated 20,000 points; its surface-relation error
