@@ -34,3 +34,13 @@ then run from the site root:
 ```powershell
 pdftoppm -f 20 -singlefile -scale-to 5400 -x 1380 -y 780 -W 1440 -H 570 -png scripts/build/barbot-paper.pdf pictures/barbot-figure-1-complete
 ```
+
+`pictures/g2-slodowy-parker-evans-labeled.png` adds English labels to the
+unchanged `pictures/g2-slodowy-parker-evans.png`, in the style of the Einstein
+structures figure: the fiber Ein^{2,1}, the bundle M_ρ → S with projection π,
+the G′₂ root system and the J-holomorphic curve. Both publication pages use
+the labeled version. Rebuild it from the site root with Pillow and matplotlib:
+
+```sh
+python3 scripts/label_g2_slodowy.py
+```
