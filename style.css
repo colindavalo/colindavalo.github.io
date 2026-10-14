@@ -211,3 +211,7 @@ img, svg { display: block; max-width: 100%; }
 @media (max-width: 700px) {
   .visual-entry { grid-template-columns: 1fr; }
 }
+.illustrated-papers .visual-stack { gap: .5rem; }
+.illustrated-papers .visual-stack a { display: block; width: 100%; }
+.illustrated-papers .visual-stack a:first-child { width: 72%; }
+.illustrated-papers .visual-stack img { max-height: none; }
