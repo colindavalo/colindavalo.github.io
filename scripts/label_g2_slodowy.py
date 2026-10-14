@@ -47,7 +47,7 @@ canvas.alpha_composite(source, (0, TOP))
 place(canvas, render(r"$\mathrm{Ein}^{2{,}1}$"), 626, 150)
 place(canvas, render(r"$\mathrm{G}_2'$ root system", 66), 2516, 150)
 place(canvas, render(r"$M_\rho \overset{\pi}{\longrightarrow} S$"), 90, TOP + 1500, anchor="left")
-place(canvas, render("$J$-holomorphic\ncurve", 66), 2516, TOP + 1450)
+place(canvas, render("Frenet frame", 66), 2516, TOP + 1430)
 
 canvas.convert("RGB").save(TARGET, optimize=True)
 print(TARGET.relative_to(ROOT), canvas.size)
