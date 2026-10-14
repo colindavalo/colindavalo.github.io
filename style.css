@@ -215,3 +215,5 @@ img, svg { display: block; max-width: 100%; }
 .illustrated-papers .visual-stack a { display: block; width: 100%; }
 .illustrated-papers .visual-stack a:first-child { width: 72%; }
 .illustrated-papers .visual-stack img { max-height: none; }
+.experimental-notice { max-width: 46rem; padding: .9rem 1.15rem; border: 1px solid #c2453a; border-radius: .4rem; background: #fdecea; color: #8f1f17; }
+.gallery-intro .experimental-notice { margin: 0; color: #8f1f17; }
