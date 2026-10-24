@@ -34,3 +34,26 @@ then run from the site root:
 ```powershell
 pdftoppm -f 20 -singlefile -scale-to 5400 -x 1380 -y 780 -W 1440 -H 570 -png scripts/build/barbot-paper.pdf pictures/barbot-figure-1-complete
 ```
+
+`pictures/g2-slodowy-parker-evans-labeled.png` adds English labels to the
+unchanged `pictures/g2-slodowy-parker-evans.png`, in the style of the Einstein
+structures figure: the fiber Ein^{2,1}, the bundle M_ρ → S with projection π,
+the G′₂ root system and the Frenet frame. Both publication pages use
+the labeled version. Rebuild it from the site root with Pillow and matplotlib:
+
+```sh
+python3 scripts/label_g2_slodowy.py
+```
+
+`pictures/pencils-jordan-curve.png` is the figure "A Jordan curve in CP^1" from
+the appendix of *Geometric structures for maximal representations and pencils*,
+compiled standalone from its TikZ code (`scripts/jordan-curve-cp1.tex`, copied
+from the archived project's `Final/GeometricStructuresCambridge.tex`):
+
+```
+cd scripts && pdflatex -output-directory build jordan-curve-cp1.tex
+pdftoppm -r 300 -png -singlefile build/jordan-curve-cp1.pdf ../pictures/pencils-jordan-curve
+```
+
+It replaces `pictures/pencils-figure-1.webp` on the publication pages; the old
+file is preserved.
