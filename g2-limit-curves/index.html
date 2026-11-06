@@ -57,6 +57,16 @@
           <p class="panel-note">\(t = 0\): the curve is a circle, a single point of \(S^2\) times a great circle of \(S^3\). Slide to the right to deform it; the arrow keys also step through the values.</p>
         </section>
 
+        <section class="panel-block">
+          <p class="panel-label">Lifts to \(S^2 \times S^3\)</p>
+          <div class="segmented lifts" id="lifts" role="radiogroup" aria-label="Lifts shown">
+            <button type="button" role="radio" aria-checked="false" data-value="1">Upper</button>
+            <button type="button" role="radio" aria-checked="false" data-value="-1">Lower</button>
+            <button type="button" role="radio" aria-checked="true" data-value="0">Both</button>
+          </div>
+          <p class="panel-note">Each null line \([u : w]\) has two lifts, \((u, w)\) and \((-u, -w)\). On these curves \(u_3\) never vanishes, so the lifts form two separate curves: the upper one \((u_3 > 0)\) and the lower one \((u_3 < 0)\). Either one alone is the whole limit curve.</p>
+        </section>
+
         <section class="panel-block" id="turnBlock">
           <p class="panel-label">Rotation in four dimensions</p>
           <input type="range" id="turn" min="-180" max="180" step="1" value="0" aria-label="Rotation of S³ before stereographic projection, in degrees">
@@ -82,6 +92,13 @@
         <h2>Attracting null lines</h2>
         <p>The holonomy \(\rho\colon \pi_1 S \to \mathrm{G}_2'\) preserves a quadratic form of signature \((3,4)\); splitting \(\mathbb R^{3,4} = U \oplus U^\perp\) into a positive and a negative part, a null line \([u : w]\) gives the pair \((u/|u|, w/|w|) \in S^2 \times S^3\), up to a common sign. The words beginning with a finite word \(g\) give the limit points \(\xi(g\,\ell\, m\, m \cdots) = \rho(g\ell m)\, p_m\), where \(p_m\) is the attracting line of \(\rho(m)\); a piece of the curve whose points spread over more than \(0.3^\circ\) in either factor is refined with longer words.</p>
         <p>The harmonic metrics (spectral solver) and holonomies were computed in advance, in Python. The change under refinement is the relative change of the generators between polynomial degrees 36 and 44 of the solver. The relation error \(\|\rho([a_1,b_1][a_2,b_2]) - I\|\) grows with the size of the generators, whose norms reach about \(2 \times 10^4\) at \(t = 0.7\). Larger values of \(t\) are left out: there, products of the matrices in double precision no longer stay on the null cone. Each picture is a finite sample from approximate holonomies, not a certified curve.</p>
+      </article>
+      <article class="text-panel">
+        <p class="eyebrow">Why two curves</p>
+        <h2>Two lifts of one curve</h2>
+        <p>The map \(S^2 \times S^3 \to \mathrm{Ein}^{2,3}\), \((u, w) \mapsto [u : w]\), is two-to-one: \((u, w)\) and \((-u, -w)\) give the same null line. Above a circle, such a double cover is either one curve going around twice, or two disjoint curves exchanged by \((u, w) \mapsto (-u, -w)\). Here it is the second case. At \(t = 0\) the first factor is constant, \(u = \pm e_3\). For the values shown, \(|u_3|\) stays above \(0.58\) at every sampled point, so the upper lift \((u_3 > 0)\) and the lower lift \((u_3 < 0)\) never meet. With both lifts drawn, each view therefore shows two copies of the same curve.</p>
+        <p>In the \(S^2\) factor, the two copies are antipodal, one in the northern cap and one in the southern cap, as on a sphere drawing of \(\mathbb{RP}^2\). In the \(S^3\) factor they are \(w(\theta)\) and \(-w(\theta)\). At \(t = 0\) they coincide, since a great circle is invariant under \(-1\). For \(t > 0\) they separate slightly: two nearly parallel strands that cross here and there, a few degrees apart (median \(2^\circ\) to \(4^\circ\)). Showing a single lift leaves one copy.</p>
+        <p>Each view shows only one factor of a curve in \(S^2 \times S^3\), so arcs that cross or run side by side in one view may be far apart in the other. These are measurements on the sampled points, not a proof.</p>
       </article>
     </section>
   </main>

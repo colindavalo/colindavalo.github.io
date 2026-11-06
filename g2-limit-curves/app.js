@@ -7,7 +7,7 @@ const LIST = window.G2_CURVE_LIST;
 
 const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const canvas = $('plot'), ctx = canvas.getContext('2d');
-const viewState = {mode: 's3', yaw: .6, pitch: .35, zoom: 1, turn: 0, pausedUntil: 0};
+const viewState = {mode: 's3', yaw: .6, pitch: .35, zoom: 1, turn: 0, lift: 0, pausedUntil: 0};
 const decoded = new Map();     // key -> Float32Array
 const loading = new Map();     // key -> Promise
 let active = null, wanted = null, dirty = true;
@@ -108,23 +108,28 @@ slider.addEventListener('keydown', e => {
 });
 $('turn').addEventListener('input', e => { viewState.turn = +e.target.value * Math.PI / 180; dirty = true; });
 
-/* ---------- view switch ---------- */
-const viewButtons = [...$('view').querySelectorAll('button')];
-function setView(value) {
-  viewButtons.forEach(b => b.setAttribute('aria-checked', String(b.dataset.value === value)));
+/* ---------- segmented switches: factor shown, lifts shown ---------- */
+function segmented(group, current, apply) {
+  const buttons = [...$(group).querySelectorAll('button')];
+  const set = value => {
+    buttons.forEach(b => b.setAttribute('aria-checked', String(b.dataset.value === value)));
+    apply(value); updateCaption(); dirty = true;
+  };
+  buttons.forEach(b => b.addEventListener('click', () => set(b.dataset.value)));
+  $(group).addEventListener('keydown', e => {
+    const step = {ArrowRight: 1, ArrowLeft: -1}[e.key];
+    if (!step) return;
+    e.preventDefault();
+    const i = buttons.findIndex(b => b.getAttribute('aria-checked') === 'true');
+    const next = buttons[(i + step + buttons.length) % buttons.length];
+    next.focus(); set(next.dataset.value);
+  });
+}
+segmented('view', 's3', value => {
   viewState.mode = value;
   $('turnBlock').classList.toggle('muted', value !== 's3');
-  updateCaption(); dirty = true;
-}
-viewButtons.forEach(b => b.addEventListener('click', () => setView(b.dataset.value)));
-$('view').addEventListener('keydown', e => {
-  const step = {ArrowRight: 1, ArrowLeft: -1}[e.key];
-  if (!step) return;
-  e.preventDefault();
-  const i = viewButtons.findIndex(b => b.dataset.value === viewState.mode);
-  const next = viewButtons[(i + step + viewButtons.length) % viewButtons.length];
-  next.focus(); setView(next.dataset.value);
 });
+segmented('lifts', '0', value => { viewState.lift = +value; });
 
 /* ---------- drawing ---------- */
 function resize() {
@@ -137,13 +142,13 @@ function resize() {
 function draw() {
   const [width, height] = resize(), size = 1.2, points = active?.points;
   ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, width, height);
-  const n = points ? points.length / 7 : 0, view = {width, height, yaw: viewState.yaw, pitch: viewState.pitch, size};
+  const view = {width, height, yaw: viewState.yaw, pitch: viewState.pitch, size, lift: viewState.lift};
   if (viewState.mode === 's2') {
-    Drawing.sphere(ctx, points, view);
-    $('counter').textContent = `${n.toLocaleString('en')} points · ${(2 * n).toLocaleString('en')} lifts`;
+    const drawn = Drawing.sphere(ctx, points, view);
+    $('counter').textContent = `${drawn.toLocaleString('en')} points drawn`;
   } else {
-    const visible = Drawing.stereographic(ctx, points, {...view, turn: viewState.turn, zoom: viewState.zoom});
-    $('counter').textContent = `${visible.toLocaleString('en')} of ${(2 * n).toLocaleString('en')} lifts in view`;
+    const {visible, total} = Drawing.stereographic(ctx, points, {...view, turn: viewState.turn, zoom: viewState.zoom});
+    $('counter').textContent = `${visible.toLocaleString('en')} of ${total.toLocaleString('en')} points in view`;
   }
 }
 function frame(time) {
@@ -156,12 +161,17 @@ function frame(time) {
   requestAnimationFrame(frame);
 }
 function updateCaption() {
+  const lifts = {
+    '0': 'Both lifts: <span class="legend-dot upper"></span>upper (<i>u</i>₃ &gt; 0) and <span class="legend-dot lower"></span>lower (<i>u</i>₃ &lt; 0), exchanged by (<i>u</i>, <i>w</i>) ↦ (−<i>u</i>, −<i>w</i>).',
+    '1': 'Upper lift only (<span class="legend-dot upper"></span><i>u</i>₃ &gt; 0): one point of S² × S³ for each null line.',
+    '-1': 'Lower lift only (<span class="legend-dot lower"></span><i>u</i>₃ &lt; 0): one point of S² × S³ for each null line.'
+  }[String(viewState.lift)];
   if (viewState.mode === 's2') {
     tex($('plotLegend'), '\\text{Limit curve, } S^2 \\text{ factor}');
-    $('caption').innerHTML = 'Both lifts ±<i>u</i> of every sampled point: <span class="legend-dot front"></span>front hemisphere, <span class="legend-dot back"></span>rear hemisphere. Drag or use the arrow keys to rotate.';
+    $('caption').innerHTML = `${lifts} Paler points are on the rear hemisphere. Drag or use the arrow keys to rotate.`;
   } else {
     tex($('plotLegend'), '\\text{Limit curve, } S^3 \\text{ factor}');
-    $('caption').innerHTML = 'Both lifts ±<i>w</i>, projected stereographically to ℝ³; the circle is the outline of the unit sphere, image of a great sphere of S³. <span class="legend-dot front"></span>in front of, <span class="legend-dot back"></span>behind its centre. Drag to rotate, scroll to zoom.';
+    $('caption').innerHTML = `${lifts} Projected stereographically to ℝ³; the circle is the outline of the unit sphere, image of a great sphere of S³, and paler points lie behind its centre. Drag to rotate, scroll to zoom.`;
   }
 }
 

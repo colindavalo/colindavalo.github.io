@@ -26,7 +26,8 @@
 #plot:focus-visible { outline: 2px solid var(--blue); outline-offset: -4px; }
 .viz-figure figcaption { padding: .9rem 1.1rem 1rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .8rem; line-height: 1.55; }
 .legend-dot { display: inline-block; width: .55rem; height: .55rem; margin: 0 .3rem 0 .1rem; border-radius: 50%; vertical-align: .02em; }
-.legend-dot.front { background: var(--accent); }
+.legend-dot.front, .legend-dot.upper { background: var(--accent); }
+.legend-dot.lower { background: #b07028; }
 .legend-dot.back { background: color-mix(in srgb, var(--violet) 55%, white); }
 
 .plot-legend { position: absolute; right: 1.1rem; bottom: .9rem; margin: 0; color: var(--ink); font-family: var(--serif); font-size: 1.05rem; pointer-events: none; }
@@ -101,3 +102,7 @@ button:disabled { opacity: .5; cursor: default; }
 /* Rotation in four dimensions: faded when the S² factor is shown */
 #turnBlock { transition: opacity .2s; }
 #turnBlock.muted { opacity: .45; }
+
+/* Choice of lifts, in the control column */
+.segmented.lifts { display: flex; }
+.segmented.lifts button { flex: 1; }
