@@ -81,22 +81,46 @@ async function show(index) {
 function describe() {
   $('repPoints').textContent = (active.points.length / 3).toLocaleString('en');
   const change = active.generator_change;
-  $('repError').textContent = change == null ? '—' : `${(100 * change).toPrecision(2)} %`;
   $('repNote').className = `panel-note${change > .02 ? ' warn' : ''}`;
   $('repNote').textContent = active.A === 0
     ? 'The Barbot representation: its limit curve is a projective line, a great circle on the sphere.'
     : change > .02 ? 'The holonomy is not yet stable under mesh refinement for this value; read the picture as qualitative.' : '';
 }
 
-/* ---------- slider ---------- */
+/* ---------- slider ----------
+   The track is to scale in A; a position snaps to the nearest computed value,
+   and the arrow keys step through the values. */
 const slider = $('aSlider');
-slider.max = LIST.length - 1;
+const largest = LIST[LIST.length - 1].A;
+let index = 0;
+slider.max = largest;
 for (const entry of LIST) {
   const tick = document.createElement('span');
-  tick.textContent = formatA(entry.A);
+  // Labels only from 0.1 on; the values below are marked but too close to label.
+  if (entry.A === 0 || entry.A >= .1 - 1e-9) tick.textContent = formatA(entry.A);
+  tick.style.left = `${100 * entry.A / largest}%`;
   $('ticks').append(tick);
 }
-slider.addEventListener('input', () => show(+slider.value));
+function select(i) {
+  index = Math.max(0, Math.min(LIST.length - 1, i));
+  slider.value = LIST[index].A;
+  show(index);
+}
+function nearest(A) {
+  return LIST.reduce((best, entry, i) => Math.abs(entry.A - A) < Math.abs(LIST[best].A - A) ? i : best, 0);
+}
+slider.addEventListener('input', () => {
+  const i = nearest(+slider.value);
+  slider.value = LIST[i].A;
+  if (i !== index) select(i);
+});
+slider.addEventListener('keydown', e => {
+  const step = {ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1, PageUp: 3, PageDown: -3}[e.key];
+  const jump = {Home: 0, End: LIST.length - 1}[e.key];
+  if (step == null && jump == null) return;
+  e.preventDefault();
+  select(jump ?? index + step);
+});
 
 /* ---------- view switch ---------- */
 const viewButtons = [...$('view').querySelectorAll('button')];
@@ -271,8 +295,8 @@ $('png').onclick = () => canvas.toBlob(blob => download(blob, `barbot-deformatio
     delimiters: [{left: '\\[', right: '\\]', display: true}, {left: '\\(', right: '\\)', display: false}],
     throwOnError: false
   });
-  const first = Math.floor((LIST.length - 1) / 2);
-  slider.value = first;
+  const first = nearest(.4);
+  index = first; slider.value = LIST[first].A;
   show(first).then(() => LIST.reduce((chain, entry) => chain.then(() => load(entry)).catch(() => {}), Promise.resolve()));
   updateCaption();
   requestAnimationFrame(frame);

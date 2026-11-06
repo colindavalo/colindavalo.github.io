@@ -74,9 +74,9 @@ button:disabled { opacity: .5; cursor: default; }
 .actions .primary:hover:not(:disabled) { background: var(--accent-dark); color: white; }
 
 /* Explanations, as the paired panels of the home page */
-.viz-notes { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; margin-top: 3.5rem; background: var(--line); border: 1px solid var(--line); }
+.viz-notes { display: grid; grid-template-columns: 1fr; gap: 1px; margin-top: 3.5rem; background: var(--line); border: 1px solid var(--line); }
 .viz-notes .text-panel { min-height: 0; min-width: 0; }
-.viz-notes .text-panel > p:not(.eyebrow) { color: #3f504a; font-size: .95rem; }
+.viz-notes .text-panel > p:not(.eyebrow) { max-width: 46rem; color: #3f504a; font-size: .95rem; }
 
 @media (max-width: 1000px) {
   .viz-stage { grid-template-columns: 1fr; }
@@ -92,12 +92,17 @@ button:disabled { opacity: .5; cursor: default; }
   .segmented button { padding: .36rem .55rem; font-size: .72rem; }
 }
 
-/* Discrete slider over A */
+/* Slider over A, to scale, snapping to the computed values */
 .a-value { margin: .2rem 0 .6rem; font-size: 1.5rem; line-height: 1.2; }
 #aSlider { display: block; width: 100%; margin: 0; accent-color: var(--accent); cursor: pointer; }
-.ticks { display: flex; justify-content: space-between; margin: .25rem 0 0; padding: 0 2px; color: var(--muted); font-size: .66rem; font-variant-numeric: tabular-nums; }
-.ticks span { width: 0; display: flex; justify-content: center; white-space: nowrap; }
+/* Ticks at their true positions: the thumb centre runs from --thumb/2 to
+   100% - --thumb/2 of the track. */
+.slider { --thumb: 16px; }
+.ticks { position: relative; height: 1.4rem; margin: .2rem calc(var(--thumb) / 2) 0; color: var(--muted); font-size: .66rem; font-variant-numeric: tabular-nums; }
+.ticks span { position: absolute; top: 0; transform: translateX(-50%); padding-top: .4rem; white-space: nowrap; }
+.ticks span::before { content: ""; position: absolute; top: 0; left: 50%; width: 1px; height: .3rem; background: currentColor; opacity: .7; }
 .ticks span.current { color: var(--accent-dark); font-weight: 750; }
+.ticks span.current::before { opacity: 1; width: 2px; margin-left: -.5px; }
 
 /* Curvature sphere */
 #curv { display: block; width: 100%; aspect-ratio: 1; cursor: grab; touch-action: none; }

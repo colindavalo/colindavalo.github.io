@@ -52,8 +52,10 @@
           <p class="panel-label">Cubic term</p>
           <p class="formula-line">\(t = A\,s^3, \quad s^2 = dx/y\)</p>
           <p class="a-value" id="aValue" aria-hidden="true"></p>
-          <input type="range" id="aSlider" min="0" max="0" step="1" value="0" aria-label="Value of A">
-          <div class="ticks" id="ticks" aria-hidden="true"></div>
+          <div class="slider">
+            <input type="range" id="aSlider" min="0" max="1" step="0.001" value="0" aria-label="Value of A">
+            <div class="ticks" id="ticks" aria-hidden="true"></div>
+          </div>
           <p class="panel-note">\(A = 0\) is the Barbot representation, whose limit curve is a projective line. Slide to the right to deform it; the arrow keys also step through the values.</p>
         </section>
 
@@ -68,7 +70,6 @@
           <p class="panel-label">Displayed curve</p>
           <dl class="rep-list">
             <div><dt>Points</dt><dd id="repPoints">—</dd></div>
-            <div><dt>Change under refinement</dt><dd id="repError">—</dd></div>
           </dl>
           <p class="panel-note" id="repNote"></p>
           <div class="actions"><button type="button" id="png">Save image</button></div>
@@ -80,21 +81,8 @@
       <article class="text-panel">
         <p class="eyebrow">What is drawn</p>
         <h2>Attracting eigenlines</h2>
-        <p>Let \(\rho\colon \pi_1 S \to \mathrm{SL}(3,\mathbb R)\) be the holonomy. When \(\rho(\gamma)\) has a simple real eigenvalue of largest modulus, its eigenline \(p_\gamma \in \mathbb{RP}^2\) is the attracting fixed point of \(\rho(\gamma)\). For an Anosov representation, these points lie on the limit curve \(\xi(\partial \pi_1 S)\) and are dense in it.</p>
-        <p>Every point of the limit curve is \(\xi(w)\) for an infinite reduced word \(w\) in \(a_1^{\pm1}, b_1^{\pm1}, a_2^{\pm1}, b_2^{\pm1}\). The words beginning with a finite word \(g\) form a piece of the boundary, whose image on the curve contains the points</p>
-        <div class="equation">\[\xi(g\,\ell\, m\, m\, m \cdots) = \rho(g\ell m)\, p_m .\]</div>
-        <p>The sampling is adaptive: a piece whose points spread over more than \(0.1^\circ\) in \(\mathbb{RP}^2\) is cut into longer words, the widest pieces first, so the curve is explored where its points are still far apart. Words never contain more than half of the relator \([a_1, b_1][a_2, b_2]\), so that no element is reached through the relation, which the computed matrices satisfy only approximately.</p>
-        <p>Each point of \(\mathbb{RP}^2\) has two unit lifts \(\pm p \in S^2\), and both are drawn: green on the front hemisphere, violet behind. In the affine chart \(X_j \neq 0\), the point \([X_0 : X_1 : X_2]\) has coordinates \(X_k / X_j\).</p>
-      </article>
-      <article class="text-panel">
-        <p class="eyebrow">How it is computed</p>
-        <h2>From the Higgs bundle to the holonomy</h2>
-        <p>On \(X\colon y^2 = x^5 - x\), let \(S = \mathcal O(p_\infty)\) be the odd square root of \(K\), with a section \(s\) such that \(s^2 = dx/y\). The Higgs bundle is</p>
-        <div class="equation">\[E = S \oplus \mathcal O \oplus S^{-1}, \qquad \Phi = \begin{pmatrix} 0 & t & 0 \\ 0 & 0 & t \\ 1 & 0 & 0 \end{pmatrix}, \qquad t \in H^0\big(X, K^{3/2}\big).\]</div>
-        <p>For \(t = 0\), the representation is the Fuchsian representation in \(\mathrm{SL}(2,\mathbb R)\) acting on \(S \oplus S^{-1}\), extended trivially on \(\mathcal O\): a Barbot representation.</p>
-        <p>For each value of \(A\), the harmonic metric \(H = \operatorname{diag}(h, 1, h^{-1})\) is solved on three successively refined meshes of \(X\), the two finest solutions are combined by Richardson extrapolation, and the flat connection \(\nabla_H + \Phi + \Phi^{*_H}\) is integrated along loops representing \(a_1, b_1, a_2, b_2\). These computations were done in advance, in Python; the page only displays their results.</p>
-        <p>The accuracy shown is the largest relative change of a generator \(\rho(a_i), \rho(b_i)\) between the two finest meshes. The relation error \(\big\| [\rho(a_1), \rho(b_1)]\,[\rho(a_2), \rho(b_2)] - I \big\|_F\) is recorded too, but it grows with the size of the matrices and is not comparable across values of \(A\).</p>
-        <p>Each picture is a finite sample computed from approximate holonomies, not a certified curve. The slider stops at \(A = 1\): beyond, the computed holonomy of \(b_1\) is no longer stable under mesh refinement (it changes by \(16\,\%\) at \(A = 1.5\)).</p>
+        <p>Let \(\rho\colon \pi_1 S \to \mathrm{SL}(3,\mathbb R)\) be the holonomy. The attracting eigenlines \(p_\gamma \in \mathbb{RP}^2\) of the matrices \(\rho(\gamma)\) lie on the limit curve and are dense in it. The words beginning with a finite word \(g\) give the points \(\xi(g\,\ell\, m\, m \cdots) = \rho(g\ell m)\, p_m\); a piece of the curve whose points spread over more than \(0.1^\circ\) is refined with longer words, so the sampling follows the curve where its points are still far apart.</p>
+        <p>The harmonic metrics and holonomies were computed in advance, in Python; each picture is a finite sample from approximate holonomies, not a certified curve.</p>
       </article>
     </section>
   </main>
