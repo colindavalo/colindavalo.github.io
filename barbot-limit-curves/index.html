@@ -81,9 +81,9 @@
         <p class="eyebrow">What is drawn</p>
         <h2>Attracting eigenlines</h2>
         <p>Let \(\rho\colon \pi_1 S \to \mathrm{SL}(3,\mathbb R)\) be the holonomy. When \(\rho(\gamma)\) has a simple real eigenvalue of largest modulus, its eigenline \(p_\gamma \in \mathbb{RP}^2\) is the attracting fixed point of \(\rho(\gamma)\). For an Anosov representation, these points lie on the limit curve \(\xi(\partial \pi_1 S)\) and are dense in it.</p>
-        <p>We compute \(p_\gamma\) for the cyclically reduced words of length at most \(3\) in \(a_1, b_1, a_2, b_2\), then moves these points by the generators, since</p>
-        <div class="equation">\[\rho(g)\, p_\gamma = p_{g\gamma g^{-1}}.\]</div>
-        <p>Points come from two explorations of the group: breadth-first orbits of these eigenlines, and random conjugates \(g\gamma g^{-1}\). As \(A\) grows, the attracting eigenlines concentrate near a few points of the curve, so its sparsely drawn parts are visited less often.</p>
+        <p>Every point of the limit curve is \(\xi(w)\) for an infinite reduced word \(w\) in \(a_1^{\pm1}, b_1^{\pm1}, a_2^{\pm1}, b_2^{\pm1}\). The words beginning with a finite word \(g\) form a piece of the boundary, whose image on the curve contains the points</p>
+        <div class="equation">\[\xi(g\,\ell\, m\, m\, m \cdots) = \rho(g\ell m)\, p_m .\]</div>
+        <p>The sampling is adaptive: a piece whose points spread over more than \(0.1^\circ\) in \(\mathbb{RP}^2\) is cut into longer words, the widest pieces first, so the curve is explored where its points are still far apart. Words never contain more than half of the relator \([a_1, b_1][a_2, b_2]\), so that no element is reached through the relation, which the computed matrices satisfy only approximately.</p>
         <p>Each point of \(\mathbb{RP}^2\) has two unit lifts \(\pm p \in S^2\), and both are drawn: green on the front hemisphere, violet behind. In the affine chart \(X_j \neq 0\), the point \([X_0 : X_1 : X_2]\) has coordinates \(X_k / X_j\).</p>
       </article>
       <article class="text-panel">
