@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="Colin Davalo">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <meta name="description" content="Limit curves of deformations of Barbot representations of a closed genus-two surface group, computed in the browser.">
+  <title>Colin Davalo: Limit curves of deformations of Barbot representations</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body id="top">
+  <a class="skip-link" href="#figure">Skip to the figure</a>
+  <header class="site-header">
+    <nav class="top-nav" aria-label="Primary navigation"><a href="../index.html#research">Research</a><a href="../publications.html">Detailed publication list</a><a href="../pictures.html">Illustrations</a><a href="../picturesSecret.html">Visual projects</a></nav>
+  </header>
+
+  <main class="viz-page">
+    <section class="viz-intro">
+      <h1>Limit curves of deformations of Barbot representations</h1>
+      <div class="viz-lede">
+        <p>A cyclic Higgs bundle on the closed surface \(y^2 = x^5 - x\) gives a representation of its fundamental group in \(\mathrm{SL}(3,\mathbb R)\). When the cubic term \(t\) vanishes, it is a Barbot representation, and its limit curve is a projective line. A nonzero \(t\) deforms the representation and bends the line. Choose \(t\) and watch the curve, drawn on the sphere \(S^2\) that double covers \(\mathbb{RP}^2\).</p>
+        <p class="paper-ref"><span class="abstract-label">Paper</span><a href="https://arxiv.org/abs/2502.09107">Anosov deformations of Barbot representations</a>, with Samuel Bronstein · <a href="https://arxiv.org/abs/2502.09107">arXiv:2502.09107</a></p>
+      </div>
+    </section>
+
+    <section class="viz-stage" id="figure" aria-label="Interactive figure">
+      <figure class="viz-figure">
+        <div class="figure-bar">
+          <div class="segmented" id="view" role="radiogroup" aria-label="Projective view">
+            <button type="button" role="radio" aria-checked="true" data-value="sphere">Sphere</button>
+            <button type="button" role="radio" aria-checked="false" data-value="0">X₀ ≠ 0</button>
+            <button type="button" role="radio" aria-checked="false" data-value="1">X₁ ≠ 0</button>
+            <button type="button" role="radio" aria-checked="false" data-value="2">X₂ ≠ 0</button>
+          </div>
+          <span class="figure-count" id="counter">No points yet</span>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="plot" tabindex="0" aria-label="Sampled limit curve. Drag or use the arrow keys to rotate."></canvas>
+          <div class="busy" id="busy" hidden><span class="busy-line"></span><div class="busy-row"><span id="busyText" role="status">Working…</span><button type="button" id="cancel">Cancel</button></div></div>
+        </div>
+        <figcaption id="caption"></figcaption>
+      </figure>
+
+      <aside class="viz-panel" aria-label="Controls">
+        <section class="panel-block">
+          <p class="panel-label">Cubic term</p>
+          <p class="formula-line">\(t = (A + Bx)\,s^3, \quad s^2 = dx/y\)</p>
+          <div class="complex-field"><span>\(A\)</span><label><input id="ar" type="number" step="0.05" value="0.2" aria-label="Real part of A"><small>Re</small></label><label><input id="ai" type="number" step="0.05" value="0" aria-label="Imaginary part of A"><small>Im</small></label></div>
+          <div class="complex-field"><span>\(B\)</span><label><input id="br" type="number" step="0.05" value="0" aria-label="Real part of B"><small>Re</small></label><label><input id="bi" type="number" step="0.05" value="0" aria-label="Imaginary part of B"><small>Im</small></label></div>
+          <p class="panel-note">\(|A|, |B| \le 1\). A new curve takes a few minutes in the browser.</p>
+          <div class="actions"><button type="button" class="primary" id="compute">Draw this curve</button></div>
+          <p class="status" id="computeStatus" role="status"></p>
+        </section>
+
+        <section class="panel-block">
+          <p class="panel-label">Displayed curve</p>
+          <dl class="rep-list">
+            <div><dt>Cubic term</dt><dd id="repT">—</dd></div>
+            <div><dt>Points</dt><dd id="repPoints">—</dd></div>
+            <div><dt>Relation error</dt><dd id="repError">—</dd></div>
+          </dl>
+          <p class="panel-note" id="repNote"></p>
+          <div class="actions"><button type="button" id="more">More points</button><button type="button" id="png">Save image</button></div>
+          <p class="status" id="sampleStatus" role="status"></p>
+        </section>
+      </aside>
+    </section>
+
+    <section class="viz-notes">
+      <article class="text-panel">
+        <p class="eyebrow">What is drawn</p>
+        <h2>Attracting eigenlines</h2>
+        <p>Let \(\rho\colon \pi_1 S \to \mathrm{SL}(3,\mathbb R)\) be the holonomy. When \(\rho(\gamma)\) has a simple real eigenvalue of largest modulus, its eigenline \(p_\gamma \in \mathbb{RP}^2\) is the attracting fixed point of \(\rho(\gamma)\). For an Anosov representation, these points lie on the limit curve \(\xi(\partial \pi_1 S)\) and are dense in it.</p>
+        <p>The page computes \(p_\gamma\) for the cyclically reduced words of length at most \(3\) in \(a_1, b_1, a_2, b_2\), then moves these points by the generators, since</p>
+        <div class="equation">\[\rho(g)\, p_\gamma = p_{g\gamma g^{-1}}.\]</div>
+        <p>Each point of \(\mathbb{RP}^2\) has two unit lifts \(\pm p \in S^2\), and both are drawn: green on the front hemisphere, violet behind. In the affine chart \(X_j \neq 0\), the point \([X_0 : X_1 : X_2]\) has coordinates \(X_k / X_j\).</p>
+      </article>
+      <article class="text-panel">
+        <p class="eyebrow">How it is computed</p>
+        <h2>From the Higgs bundle to the holonomy</h2>
+        <p>On \(X\colon y^2 = x^5 - x\), let \(S = \mathcal O(p_\infty)\) be the odd square root of \(K\), with a section \(s\) such that \(s^2 = dx/y\). The Higgs bundle is</p>
+        <div class="equation">\[E = S \oplus \mathcal O \oplus S^{-1}, \qquad \Phi = \begin{pmatrix} 0 & t & 0 \\ 0 & 0 & t \\ 1 & 0 & 0 \end{pmatrix}, \qquad t \in H^0\big(X, K^{3/2}\big).\]</div>
+        <p>For \(t = 0\), the representation is the Fuchsian representation in \(\mathrm{SL}(2,\mathbb R)\) acting on \(S \oplus S^{-1}\), extended trivially on \(\mathcal O\): a Barbot representation.</p>
+        <p>The page solves for the harmonic metric \(H = \operatorname{diag}(h, 1, h^{-1})\) on two consecutive meshes of \(X\) and extrapolates, then integrates the flat connection \(\nabla_H + \Phi + \Phi^{*_H}\) along loops representing \(a_1, b_1, a_2, b_2\). Everything runs in this browser, in Python (Pyodide, NumPy, SciPy); nothing is sent to a server.</p>
+        <p>The relation error of the computed matrices is</p>
+        <div class="equation">\[\big\| [\rho(a_1), \rho(b_1)]\,[\rho(a_2), \rho(b_2)] - I \big\|_F .\]</div>
+        <p>The picture is a finite sample computed from approximate holonomies, not a certified curve; more points do not make the holonomy more accurate.</p>
+      </article>
+    </section>
+  </main>
+
+  <footer class="site-footer"><p>Colin Davalo · Turin, Italy</p><a href="#top">Back to top <span aria-hidden="true">↑</span></a></footer>
+  <script src="vendor/katex/katex.min.js"></script>
+  <script src="vendor/katex/auto-render.min.js"></script>
+  <script src="data/reference.js"></script>
+  <script src="sphere.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
