@@ -23,7 +23,7 @@
     <section class="viz-intro">
       <h1>Limit curves of deformations of Barbot representations</h1>
       <div class="viz-lede">
-        <p>A cyclic Higgs bundle on the closed surface \(y^2 = x^5 - x\) gives a representation of its fundamental group in \(\mathrm{SL}(3,\mathbb R)\). When the cubic term \(t\) vanishes, it is a Barbot representation, and its limit curve is a projective line. A nonzero \(t\) deforms the representation and bends the line. Choose \(t\) and watch the curve, drawn on the sphere \(S^2\) that double covers \(\mathbb{RP}^2\).</p>
+        <p>A cyclic Higgs bundle on the closed surface \(y^2 = x^5 - x\) gives a representation of its fundamental group in \(\mathrm{SL}(3,\mathbb R)\). When the cubic term \(t\) vanishes, it is a Barbot representation, and its limit curve is a projective line. As \(t = A\,s^3\) grows, the representation is deformed and the line bends into a more and more polygonal curve. Move \(A\) and watch the curve, drawn on the sphere \(S^2\) that double covers \(\mathbb{RP}^2\).</p>
         <p class="paper-ref"><span class="abstract-label">Paper</span><a href="https://arxiv.org/abs/2502.09107">Anosov deformations of Barbot representations</a>, with Samuel Bronstein · <a href="https://arxiv.org/abs/2502.09107">arXiv:2502.09107</a></p>
       </div>
     </section>
@@ -41,7 +41,8 @@
         </div>
         <div class="canvas-wrap">
           <canvas id="plot" tabindex="0" aria-label="Sampled limit curve. Drag or use the arrow keys to rotate."></canvas>
-          <div class="busy" id="busy" hidden><span class="busy-line"></span><div class="busy-row"><span id="busyText" role="status">Working…</span><button type="button" id="cancel">Cancel</button></div></div>
+          <p class="plot-legend" id="plotLegend">Limit curve in \(\mathbb{RP}^2\)</p>
+          <div class="busy" id="busy" hidden><span class="busy-line"></span><span id="busyText" role="status">Loading…</span></div>
         </div>
         <figcaption id="caption"></figcaption>
       </figure>
@@ -49,24 +50,28 @@
       <aside class="viz-panel" aria-label="Controls">
         <section class="panel-block">
           <p class="panel-label">Cubic term</p>
-          <p class="formula-line">\(t = (A + Bx)\,s^3, \quad s^2 = dx/y\)</p>
-          <div class="complex-field"><span>\(A\)</span><label><input id="ar" type="number" step="0.05" value="0.2" aria-label="Real part of A"><small>Re</small></label><label><input id="ai" type="number" step="0.05" value="0" aria-label="Imaginary part of A"><small>Im</small></label></div>
-          <div class="complex-field"><span>\(B\)</span><label><input id="br" type="number" step="0.05" value="0" aria-label="Real part of B"><small>Re</small></label><label><input id="bi" type="number" step="0.05" value="0" aria-label="Imaginary part of B"><small>Im</small></label></div>
-          <p class="panel-note">\(|A|, |B| \le 1\). A new curve takes a few minutes in the browser.</p>
-          <div class="actions"><button type="button" class="primary" id="compute">Draw this curve</button></div>
-          <p class="status" id="computeStatus" role="status"></p>
+          <p class="formula-line">\(t = A\,s^3, \quad s^2 = dx/y\)</p>
+          <p class="a-value" id="aValue" aria-hidden="true"></p>
+          <input type="range" id="aSlider" min="0" max="0" step="1" value="0" aria-label="Value of A">
+          <div class="ticks" id="ticks" aria-hidden="true"></div>
+          <p class="panel-note">\(A = 0\) is the Barbot representation, whose limit curve is a projective line. Slide to the right to deform it; the arrow keys also step through the values.</p>
+        </section>
+
+        <section class="panel-block" id="curvatureBlock">
+          <p class="panel-label">Curvature of the metric</p>
+          <canvas id="curv" tabindex="0" aria-label="Curvature of the metric on the x-sphere; drag or use the arrow keys to rotate"></canvas>
+          <div class="colorbar"><span class="bar" id="curvBar"></span><div class="bar-labels"><span>\(-4\)</span><span>\(K_g\)</span><span>\(0\)</span></div></div>
+          <p class="panel-note">Curvature of the metric \(g = e^{w}|dz|^2\) solving Hitchin's equation, \(K_g = -4 + 4\,|t|^2 e^{-3w/2}\). It is invariant under \(\iota\colon y \mapsto -y\) and is drawn on the \(x\)-sphere \(\mathbb{CP}^1 = X/\iota\), with the branch values marked. Drag to rotate.</p>
         </section>
 
         <section class="panel-block">
           <p class="panel-label">Displayed curve</p>
           <dl class="rep-list">
-            <div><dt>Cubic term</dt><dd id="repT">—</dd></div>
             <div><dt>Points</dt><dd id="repPoints">—</dd></div>
-            <div><dt>Relation error</dt><dd id="repError">—</dd></div>
+            <div><dt>Change under refinement</dt><dd id="repError">—</dd></div>
           </dl>
           <p class="panel-note" id="repNote"></p>
-          <div class="actions"><button type="button" id="more">More points</button><button type="button" id="png">Save image</button></div>
-          <p class="status" id="sampleStatus" role="status"></p>
+          <div class="actions"><button type="button" id="png">Save image</button></div>
         </section>
       </aside>
     </section>
@@ -76,8 +81,9 @@
         <p class="eyebrow">What is drawn</p>
         <h2>Attracting eigenlines</h2>
         <p>Let \(\rho\colon \pi_1 S \to \mathrm{SL}(3,\mathbb R)\) be the holonomy. When \(\rho(\gamma)\) has a simple real eigenvalue of largest modulus, its eigenline \(p_\gamma \in \mathbb{RP}^2\) is the attracting fixed point of \(\rho(\gamma)\). For an Anosov representation, these points lie on the limit curve \(\xi(\partial \pi_1 S)\) and are dense in it.</p>
-        <p>The page computes \(p_\gamma\) for the cyclically reduced words of length at most \(3\) in \(a_1, b_1, a_2, b_2\), then moves these points by the generators, since</p>
+        <p>We compute \(p_\gamma\) for the cyclically reduced words of length at most \(3\) in \(a_1, b_1, a_2, b_2\), then moves these points by the generators, since</p>
         <div class="equation">\[\rho(g)\, p_\gamma = p_{g\gamma g^{-1}}.\]</div>
+        <p>Points come from two explorations of the group: breadth-first orbits of these eigenlines, and random conjugates \(g\gamma g^{-1}\). As \(A\) grows, the attracting eigenlines concentrate near a few points of the curve, so its sparsely drawn parts are visited less often.</p>
         <p>Each point of \(\mathbb{RP}^2\) has two unit lifts \(\pm p \in S^2\), and both are drawn: green on the front hemisphere, violet behind. In the affine chart \(X_j \neq 0\), the point \([X_0 : X_1 : X_2]\) has coordinates \(X_k / X_j\).</p>
       </article>
       <article class="text-panel">
@@ -86,10 +92,9 @@
         <p>On \(X\colon y^2 = x^5 - x\), let \(S = \mathcal O(p_\infty)\) be the odd square root of \(K\), with a section \(s\) such that \(s^2 = dx/y\). The Higgs bundle is</p>
         <div class="equation">\[E = S \oplus \mathcal O \oplus S^{-1}, \qquad \Phi = \begin{pmatrix} 0 & t & 0 \\ 0 & 0 & t \\ 1 & 0 & 0 \end{pmatrix}, \qquad t \in H^0\big(X, K^{3/2}\big).\]</div>
         <p>For \(t = 0\), the representation is the Fuchsian representation in \(\mathrm{SL}(2,\mathbb R)\) acting on \(S \oplus S^{-1}\), extended trivially on \(\mathcal O\): a Barbot representation.</p>
-        <p>The page solves for the harmonic metric \(H = \operatorname{diag}(h, 1, h^{-1})\) on two consecutive meshes of \(X\) and extrapolates, then integrates the flat connection \(\nabla_H + \Phi + \Phi^{*_H}\) along loops representing \(a_1, b_1, a_2, b_2\). Everything runs in this browser, in Python (Pyodide, NumPy, SciPy); nothing is sent to a server.</p>
-        <p>The relation error of the computed matrices is</p>
-        <div class="equation">\[\big\| [\rho(a_1), \rho(b_1)]\,[\rho(a_2), \rho(b_2)] - I \big\|_F .\]</div>
-        <p>The picture is a finite sample computed from approximate holonomies, not a certified curve; more points do not make the holonomy more accurate.</p>
+        <p>For each value of \(A\), the harmonic metric \(H = \operatorname{diag}(h, 1, h^{-1})\) is solved on three successively refined meshes of \(X\), the two finest solutions are combined by Richardson extrapolation, and the flat connection \(\nabla_H + \Phi + \Phi^{*_H}\) is integrated along loops representing \(a_1, b_1, a_2, b_2\). These computations were done in advance, in Python; the page only displays their results.</p>
+        <p>The accuracy shown is the largest relative change of a generator \(\rho(a_i), \rho(b_i)\) between the two finest meshes. The relation error \(\big\| [\rho(a_1), \rho(b_1)]\,[\rho(a_2), \rho(b_2)] - I \big\|_F\) is recorded too, but it grows with the size of the matrices and is not comparable across values of \(A\).</p>
+        <p>Each picture is a finite sample computed from approximate holonomies, not a certified curve. The slider stops at \(A = 1\): beyond, the computed holonomy of \(b_1\) is no longer stable under mesh refinement (it changes by \(16\,\%\) at \(A = 1.5\)).</p>
       </article>
     </section>
   </main>
@@ -97,7 +102,8 @@
   <footer class="site-footer"><p>Colin Davalo · Turin, Italy</p><a href="#top">Back to top <span aria-hidden="true">↑</span></a></footer>
   <script src="vendor/katex/katex.min.js"></script>
   <script src="vendor/katex/auto-render.min.js"></script>
-  <script src="data/reference.js"></script>
+  <script src="data/curves.js"></script>
+  <script src="curvature.js"></script>
   <script src="sphere.js"></script>
   <script src="app.js"></script>
 </body>

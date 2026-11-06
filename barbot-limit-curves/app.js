@@ -1,34 +1,102 @@
-/* Interface of the limit-curve page. The saved representation and its first
-   sample come from data/reference.js; new curves are computed in worker.js.
-   Only the cubic term t = (A + Bx) s³ is editable: the surface y² = x⁵ − x,
-   the odd spin structure p∞, the mesh level and the sampler are fixed. */
+/* Interface of the limit-curve page. All curves are precomputed
+   (calculs/precompute_curves.py): data/curves.js lists them and each
+   data/curve-<A>.js holds the quantized points of one value of A (B = 0). */
 'use strict';
 const $ = id => document.getElementById(id);
-const LEVEL = 6;
-const FIXED = {roots: [[0, 0], [1, 0], [0, 1], [-1, 0], [0, -1]], spin: 'odd_inf', level: LEVEL};
-const SAMPLER = {mode: 'orbit', length: 12, seed: 7};
-const BUDGETS = [20000, 50000, 100000];
 const SUB = n => '₀₁₂'[n];
+const LIST = window.BARBOT_CURVE_LIST;
 
 const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const canvas = $('plot'), ctx = canvas.getContext('2d');
 const viewState = {mode: 'sphere', yaw: .6, pitch: .35, zoom: 2, pan: [0, 0], pausedUntil: 0};
-const cache = new Map();   // "A|B" -> computed representation, for this visit
-let active = null, busy = false, dirty = true;
+const decoded = new Map();     // key -> Float32Array
+const curvatures = new Map();  // key -> curvature texture
+window.BARBOT_CURVATURE = window.BARBOT_CURVATURE || {};
+const loading = new Map();     // key -> Promise
+let active = null, wanted = null, dirty = true;
 
-/* ---------- mathematics in text ---------- */
 const tex = (element, source) => katex.render(source, element, {throwOnError: false});
-const num = x => {
-  const r = Math.round(x * 1000) / 1000;
-  return String(Object.is(r, -0) ? 0 : r);
-};
-function complexTex([re, im]) {
-  if (!im) return num(re);
-  const imaginary = `${Math.abs(im) === 1 ? '' : num(Math.abs(im))}i`;
-  if (!re) return im < 0 ? `-${imaginary}` : imaginary;
-  return `(${num(re)} ${im < 0 ? '-' : '+'} ${imaginary})`;
+const formatA = A => String(Math.round(A * 100) / 100);
+
+/* ---------- data ---------- */
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = src; script.onload = resolve; script.onerror = reject;
+    document.head.append(script);
+  });
 }
-const key = (A, B) => [...A, ...B].map(num).join('|');
+async function loadCurvature(key) {
+  if (curvatures.has(key)) return curvatures.get(key);
+  if (!window.BARBOT_CURVATURE?.[key]) await loadScript(`data/curvature-${key}.js`);
+  const values = Curvature.decode(window.BARBOT_CURVATURE[key]);
+  delete window.BARBOT_CURVATURE[key];
+  curvatures.set(key, values);
+  return values;
+}
+
+function load(entry) {
+  if (decoded.has(entry.key)) return Promise.resolve(decoded.get(entry.key));
+  if (!loading.has(entry.key)) loading.set(entry.key, new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = `data/curve-${entry.key}.js`;
+    script.onload = () => {
+      const raw = atob(window.BARBOT_CURVES[entry.key]);
+      delete window.BARBOT_CURVES[entry.key];
+      const ints = new Int16Array(raw.length / 2);
+      for (let i = 0; i < ints.length; i++) ints[i] = raw.charCodeAt(2 * i) | (raw.charCodeAt(2 * i + 1) << 8);
+      const points = Float32Array.from(ints, v => v / 32767);
+      decoded.set(entry.key, points);
+      resolve(points);
+    };
+    script.onerror = () => { loading.delete(entry.key); reject(Error(`Could not load the curve for A = ${formatA(entry.A)}.`)); };
+    document.head.append(script);
+  }));
+  return loading.get(entry.key);
+}
+
+async function show(index) {
+  const entry = LIST[index];
+  wanted = entry.key;
+  tex($('aValue'), `A = ${formatA(entry.A)}`);
+  $('aSlider').setAttribute('aria-valuetext', `A = ${formatA(entry.A)}`);
+  [...$('ticks').children].forEach((tick, i) => tick.classList.toggle('current', i === index));
+  if (!decoded.has(entry.key)) { $('busy').hidden = false; $('busyText').textContent = `Loading the curve for A = ${formatA(entry.A)}…`; }
+  try {
+    const points = await load(entry);
+    if (wanted !== entry.key) return;
+    active = {...entry, points};
+    describe();
+    loadCurvature(entry.key).then(K => { if (wanted === entry.key) { curvState.K = K; requestCurvature(); } })
+      .catch(() => { if (wanted === entry.key) { curvState.K = null; requestCurvature(); } });
+    if (viewState.mode !== 'sphere') fitChart();
+    dirty = true;
+  } catch (error) {
+    if (wanted === entry.key) $('repNote').textContent = error.message;
+  } finally {
+    if (wanted === entry.key) $('busy').hidden = true;
+  }
+}
+
+function describe() {
+  $('repPoints').textContent = (active.points.length / 3).toLocaleString('en');
+  const change = active.generator_change;
+  $('repError').textContent = change == null ? '—' : `${(100 * change).toPrecision(2)} %`;
+  $('repNote').className = `panel-note${change > .02 ? ' warn' : ''}`;
+  $('repNote').textContent = active.A === 0
+    ? 'The Barbot representation: its limit curve is a projective line, a great circle on the sphere.'
+    : change > .02 ? 'The holonomy is not yet stable under mesh refinement for this value; read the picture as qualitative.' : '';
+}
+
+/* ---------- slider ---------- */
+const slider = $('aSlider');
+slider.max = LIST.length - 1;
+for (const entry of LIST) {
+  const tick = document.createElement('span');
+  tick.textContent = formatA(entry.A);
+  $('ticks').append(tick);
+}
+slider.addEventListener('input', () => show(+slider.value));
 
 /* ---------- view switch ---------- */
 const viewButtons = [...$('view').querySelectorAll('button')];
@@ -47,73 +115,6 @@ $('view').addEventListener('keydown', e => {
   const next = viewButtons[(i + step + viewButtons.length) % viewButtons.length];
   next.focus(); setView(next.dataset.value);
 });
-
-/* ---------- worker client ---------- */
-let worker = null, sequence = 0;
-const pending = new Map();
-function ensureWorker() {
-  if (worker) return worker;
-  worker = new Worker('worker.js');
-  worker.onmessage = ({data}) => {
-    const call = pending.get(data.id);
-    if (!call) return;
-    if (data.type === 'progress') { call.progress?.(data.message); return; }
-    pending.delete(data.id);
-    if (data.type === 'result') call.resolve(data.result); else call.reject(Error(data.message));
-  };
-  worker.onerror = event => {
-    event.preventDefault();
-    for (const call of pending.values()) call.reject(Error(`The browser solver stopped: ${event.message || 'unknown error'}`));
-    pending.clear(); worker = null;
-  };
-  return worker;
-}
-function request(type, payload, progress) {
-  if (location.protocol === 'file:') {
-    return Promise.reject(Error('New curves need the page to be served over HTTP; the saved curve works offline.'));
-  }
-  const id = ++sequence;
-  return new Promise((resolve, reject) => {
-    pending.set(id, {resolve, reject, progress});
-    ensureWorker().postMessage({id, type, payload});
-  });
-}
-$('cancel').onclick = () => {
-  worker?.terminate(); worker = null;
-  for (const call of pending.values()) call.reject(Object.assign(Error('Cancelled'), {cancelled: true}));
-  pending.clear();
-};
-function setBusy(message) {
-  busy = Boolean(message);
-  $('busy').hidden = !busy;
-  if (busy) $('busyText').textContent = message;
-  for (const id of ['compute', 'more']) $(id).disabled = busy;
-  if (!busy) $('more').disabled = !active || active.count >= BUDGETS.at(-1);
-}
-const progress = message => { $('busyText').textContent = message; };
-function setStatus(id, text, kind = '') { $(id).className = `status${kind ? ` ${kind}` : ''}`; $(id).textContent = text; }
-
-/* ---------- displayed curve ---------- */
-function showRepresentation() {
-  const {A, B} = active.settings, error = active.holonomy.surface_relation_error;
-  tex($('repT'), `A = ${complexTex(A)},\\ B = ${complexTex(B)}`);
-  $('repPoints').textContent = (active.points.length / 3).toLocaleString('en');
-  const [mantissa, exponent] = error.toExponential(1).split('e');
-  tex($('repError'), `${mantissa} \\times 10^{${+exponent}}`);
-  const coarse = error > .05;
-  $('repNote').className = `panel-note${coarse ? ' warn' : ''}`;
-  $('repNote').textContent = coarse
-    ? 'The relation error is large for this cubic term: the computed holonomy is too coarse to trust fine detail.'
-    : `Mesh level ${active.settings.level}.`;
-  $('more').disabled = active.count >= BUDGETS.at(-1);
-}
-function toPoints(list) { return Float32Array.from(list.flat()); }
-function activate(representation, sample, count) {
-  active = {...representation, points: toPoints(sample.points), count};
-  showRepresentation();
-  if (viewState.mode !== 'sphere') fitChart();
-  dirty = true;
-}
 
 /* ---------- drawing ---------- */
 function resize() {
@@ -145,6 +146,8 @@ function frame(time) {
   requestAnimationFrame(frame);
 }
 function updateCaption() {
+  tex($('plotLegend'), viewState.mode === 'sphere' ? '\\text{Limit curve in } \\mathbb{RP}^2'
+    : `\\text{Limit curve in } \\mathbb{RP}^2,\\ X_${viewState.mode} \\neq 0`);
   if (viewState.mode === 'sphere') {
     $('caption').innerHTML = 'Both lifts ±<i>p</i> of every sampled point: <span class="legend-dot front"></span>front hemisphere, <span class="legend-dot back"></span>rear hemisphere. Drag or use the arrow keys to rotate.';
   } else {
@@ -210,57 +213,57 @@ canvas.addEventListener('keydown', e => {
 });
 new ResizeObserver(() => { dirty = true; }).observe(canvas);
 
-/* ---------- cubic term and points ---------- */
-function readCubic() {
-  const values = ['ar', 'ai', 'br', 'bi'].map(id => +$(id).value);
-  if (!values.every(Number.isFinite)) throw Error('A and B need numeric real and imaginary parts.');
-  const A = values.slice(0, 2), B = values.slice(2);
-  if (Math.hypot(...A) > 1 || Math.hypot(...B) > 1) throw Error('Keep |A| ≤ 1 and |B| ≤ 1.');
-  return {A, B};
+/* ---------- curvature sphere ---------- */
+const curv = $('curv'), cctx = curv.getContext('2d');
+const curvState = {K: null, yaw: .5, pitch: .3, drag: null, pending: false};
+$('curvBar').style.background = Curvature.gradient();
+function drawCurvature() {
+  curvState.pending = false;
+  const box = curv.getBoundingClientRect();
+  if (!box.width) return;
+  // Full resolution at rest, one pixel per CSS pixel while dragging.
+  const ratio = curvState.drag ? 1 : Math.min(devicePixelRatio || 1, 2);
+  const w = Math.round(box.width * ratio), h = Math.round(box.height * ratio);
+  if (curv.width !== w || curv.height !== h) { curv.width = w; curv.height = h; }
+  cctx.setTransform(1, 0, 0, 1, 0, 0);
+  cctx.clearRect(0, 0, w, h);
+  if (curvState.K) Curvature.draw(cctx, curvState.K, {width: box.width, height: box.height, yaw: curvState.yaw, pitch: curvState.pitch, ratio});
+  else { cctx.fillStyle = '#60706a'; cctx.font = `${12 * ratio}px Inter, system-ui, sans-serif`; cctx.fillText('Not computed for this value.', 8 * ratio, 20 * ratio); }
 }
-for (const id of ['ar', 'ai', 'br', 'bi']) $(id).addEventListener('input', () => { if (!busy) setStatus('computeStatus', ''); });
-
-$('compute').onclick = async () => {
-  let cubic;
-  try { cubic = readCubic(); } catch (e) { setStatus('computeStatus', e.message, 'error'); return; }
-  const count = BUDGETS[0], known = cache.get(key(cubic.A, cubic.B));
-  setBusy('Starting Python in this browser (first use downloads it)…');
-  setStatus('computeStatus', '');
-  try {
-    const representation = known ?? await (async () => {
-      const computed = await request('compute', {...FIXED, ...cubic}, progress);
-      const value = {settings: computed.settings, holonomy: computed.holonomy, seconds: computed.seconds};
-      cache.set(key(cubic.A, cubic.B), value);
-      return value;
-    })();
-    progress('Sampling attracting eigenlines…');
-    const sample = await request('sample', {holonomy: representation.holonomy, parameters: {...SAMPLER, count}}, progress);
-    activate(representation, sample, count);
-    setStatus('computeStatus', known ? '' : `Computed in ${Math.max(1, Math.round(representation.seconds / 60))} min.`);
-  } catch (e) {
-    setStatus('computeStatus', e.cancelled ? 'Cancelled; the displayed curve is unchanged.' : e.message, e.cancelled ? '' : 'error');
-  } finally { setBusy(null); }
-};
-
-$('more').onclick = async () => {
-  const count = BUDGETS.find(b => b > active.count);
-  if (!count) return;
-  setBusy('Starting Python in this browser (first use downloads it)…');
-  try {
-    const sample = await request('sample', {holonomy: active.holonomy, parameters: {...SAMPLER, count}}, progress);
-    activate(active, sample, count);
-    setStatus('sampleStatus', '');
-  } catch (e) {
-    setStatus('sampleStatus', e.cancelled ? 'Cancelled; the previous points are kept.' : e.message, e.cancelled ? '' : 'error');
-  } finally { setBusy(null); }
-};
+function requestCurvature() {
+  if (curvState.pending) return;
+  curvState.pending = true;
+  requestAnimationFrame(drawCurvature);
+}
+curv.addEventListener('pointerdown', e => {
+  curvState.drag = {x: e.clientX, y: e.clientY, yaw: curvState.yaw, pitch: curvState.pitch};
+  curv.setPointerCapture(e.pointerId);
+});
+curv.addEventListener('pointermove', e => {
+  const d = curvState.drag;
+  if (!d) return;
+  curvState.yaw = d.yaw + (e.clientX - d.x) * .01;
+  curvState.pitch = Math.max(-1.55, Math.min(1.55, d.pitch + (e.clientY - d.y) * .01));
+  requestCurvature();
+});
+const curvRelease = () => { curvState.drag = null; requestCurvature(); };
+curv.addEventListener('pointerup', curvRelease);
+curv.addEventListener('pointercancel', curvRelease);
+curv.addEventListener('keydown', e => {
+  const k = {ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1]}[e.key];
+  if (!k) return;
+  e.preventDefault();
+  curvState.yaw += k[0] * .1; curvState.pitch = Math.max(-1.55, Math.min(1.55, curvState.pitch + k[1] * .1));
+  requestCurvature();
+});
+new ResizeObserver(requestCurvature).observe(curv);
 
 function download(blob, name) {
   const url = URL.createObjectURL(blob), a = document.createElement('a');
   a.href = url; a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-$('png').onclick = () => canvas.toBlob(blob => download(blob, 'barbot-deformation-limit-curve.png'));
+$('png').onclick = () => canvas.toBlob(blob => download(blob, `barbot-deformation-A-${active ? active.key : ''}.png`));
 
 /* ---------- start ---------- */
 (function start() {
@@ -268,12 +271,9 @@ $('png').onclick = () => canvas.toBlob(blob => download(blob, 'barbot-deformatio
     delimiters: [{left: '\\[', right: '\\]', display: true}, {left: '\\(', right: '\\)', display: false}],
     throwOnError: false
   });
-  const ref = window.BARBOT_REFERENCE;
-  const bytes = Uint8Array.from(atob(ref.points_f32), c => c.charCodeAt(0));
-  const representation = {settings: ref.settings, holonomy: ref.holonomy};
-  cache.set(key(ref.settings.A, ref.settings.B), representation);
-  active = {...representation, points: new Float32Array(bytes.buffer), count: ref.parameters.count};
-  showRepresentation();
+  const first = Math.floor((LIST.length - 1) / 2);
+  slider.value = first;
+  show(first).then(() => LIST.reduce((chain, entry) => chain.then(() => load(entry)).catch(() => {}), Promise.resolve()));
   updateCaption();
   requestAnimationFrame(frame);
 })();

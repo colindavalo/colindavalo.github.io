@@ -29,7 +29,8 @@
 .legend-dot.front { background: var(--accent); }
 .legend-dot.back { background: color-mix(in srgb, var(--violet) 55%, white); }
 
-.busy { position: absolute; left: 1rem; right: 1rem; bottom: 1rem; display: grid; gap: .45rem; padding: .7rem .9rem; background: color-mix(in srgb, var(--white) 92%, transparent); border: 1px solid var(--line); color: var(--ink); font-size: .78rem; }
+.plot-legend { position: absolute; right: 1.1rem; bottom: .9rem; margin: 0; color: var(--ink); font-family: var(--serif); font-size: 1.05rem; pointer-events: none; }
+.busy { position: absolute; left: 1rem; right: 1rem; top: 1rem; display: grid; gap: .45rem; padding: .7rem .9rem; background: color-mix(in srgb, var(--white) 92%, transparent); border: 1px solid var(--line); color: var(--ink); font-size: .78rem; }
 .busy[hidden] { display: none; }
 .busy-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
 .busy-row button { padding: 0; border: 0; background: none; color: var(--accent-dark); font: 750 .7rem/1.4 var(--sans); letter-spacing: .06em; text-transform: uppercase; cursor: pointer; }
@@ -90,3 +91,17 @@ button:disabled { opacity: .5; cursor: default; }
   .figure-bar { padding: .6rem; }
   .segmented button { padding: .36rem .55rem; font-size: .72rem; }
 }
+
+/* Discrete slider over A */
+.a-value { margin: .2rem 0 .6rem; font-size: 1.5rem; line-height: 1.2; }
+#aSlider { display: block; width: 100%; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.ticks { display: flex; justify-content: space-between; margin: .25rem 0 0; padding: 0 2px; color: var(--muted); font-size: .66rem; font-variant-numeric: tabular-nums; }
+.ticks span { width: 0; display: flex; justify-content: center; white-space: nowrap; }
+.ticks span.current { color: var(--accent-dark); font-weight: 750; }
+
+/* Curvature sphere */
+#curv { display: block; width: 100%; aspect-ratio: 1; cursor: grab; touch-action: none; }
+#curv:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.colorbar { margin: .3rem 0 0; }
+.colorbar .bar { display: block; height: .45rem; border-radius: 1px; }
+.bar-labels { display: flex; justify-content: space-between; margin-top: .2rem; color: var(--muted); font-size: .8rem; }

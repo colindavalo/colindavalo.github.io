@@ -5,7 +5,7 @@ const Drawing = (() => {
   const INK = {
     front: ['rgba(18,107,86,.5)', 'rgba(18,107,86,.72)', 'rgba(12,77,62,.92)'],
     back: 'rgba(107,92,165,.36)',
-    rim: '#c9d6d0', grid: 'rgba(96,112,106,.16)', gridBack: 'rgba(96,112,106,.08)',
+    rim: '#c9d6d0',
     axis: '#d8dfdc', label: '#60706a'
   };
 
@@ -18,34 +18,6 @@ const Drawing = (() => {
     };
   }
 
-  function graticule(ctx, view, cx, cy, r, back) {
-    ctx.strokeStyle = back ? INK.gridBack : INK.grid;
-    ctx.lineWidth = .8;
-    ctx.setLineDash(back ? [2, 4] : []);
-    const circles = [];
-    for (const lat of [-60, -30, 0, 30, 60]) {
-      const a = lat * Math.PI / 180;
-      circles.push(t => [Math.cos(a) * Math.cos(t), Math.cos(a) * Math.sin(t), Math.sin(a)]);
-    }
-    for (const lon of [0, 45, 90, 135]) {
-      const a = lon * Math.PI / 180;
-      circles.push(t => [Math.cos(t) * Math.cos(a), Math.cos(t) * Math.sin(a), Math.sin(t)]);
-    }
-    for (const circle of circles) {
-      ctx.beginPath();
-      let pen = false;
-      for (let i = 0; i <= 120; i++) {
-        const [X, Z, D] = view(...circle(i * Math.PI / 60));
-        if ((D < 0) !== back) { pen = false; continue; }
-        const x = cx + r * X, y = cy - r * Z;
-        if (pen) ctx.lineTo(x, y); else ctx.moveTo(x, y);
-        pen = true;
-      }
-      ctx.stroke();
-    }
-    ctx.setLineDash([]);
-  }
-
   function sphere(ctx, points, {width, height, yaw, pitch, size}) {
     const r = Math.min(width, height) * .43, cx = width / 2, cy = height / 2, view = camera(yaw, pitch);
     const n = points ? points.length / 3 : 0, back = [], front = [[], [], []];
@@ -56,7 +28,6 @@ const Drawing = (() => {
       front[depth > .66 ? 2 : depth > .33 ? 1 : 0].push(s * X, s * Z);
       back.push(-s * X, -s * Z);
     }
-    graticule(ctx, view, cx, cy, r, true);
     const half = size / 2;
     ctx.fillStyle = INK.back;
     ctx.beginPath();
@@ -67,7 +38,6 @@ const Drawing = (() => {
     wash.addColorStop(1, 'rgba(220,236,230,.5)');
     ctx.fillStyle = wash;
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI); ctx.fill();
-    graticule(ctx, view, cx, cy, r, false);
     ctx.strokeStyle = INK.rim; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI); ctx.stroke();
     front.forEach((band, k) => {
@@ -105,7 +75,7 @@ const Drawing = (() => {
     const digits = Math.max(0, -Math.floor(Math.log10(step)));
     for (let u = x0; u <= x1; u += step) if (Math.abs(u) > step / 2) ctx.fillText(u.toFixed(digits), cx + u * scale + 4, Math.min(height - 6, Math.max(14, cy + 14)));
     for (let v = y0; v <= y1; v += step) if (Math.abs(v) > step / 2) ctx.fillText(v.toFixed(digits), Math.min(width - 34, Math.max(4, cx + 4)), cy - v * scale - 4);
-    ctx.fillText(`X${sub(others[0])}/X${sub(axis)}`, width - 64, height - 10);
+    ctx.fillText(`X${sub(others[0])}/X${sub(axis)}`, width - 64, Math.min(height - 40, Math.max(14, cy - 8)));
     ctx.fillText(`X${sub(others[1])}/X${sub(axis)}`, 10, 18);
     const n = points ? points.length / 3 : 0, half = size / 2;
     let visible = 0;
