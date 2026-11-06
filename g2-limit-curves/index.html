@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="Colin Davalo">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <meta name="description" content="Limit curves in the Einstein universe of cyclic G2' representations of a closed genus-two surface group, precomputed.">
+  <title>Colin Davalo: Limit curves of G₂′ representations</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body id="top">
+  <a class="skip-link" href="#figure">Skip to the figure</a>
+  <header class="site-header">
+    <nav class="top-nav" aria-label="Primary navigation"><a href="../index.html#research">Research</a><a href="../publications.html">Detailed publication list</a><a href="../pictures.html">Illustrations</a><a href="../picturesSecret.html">Visual projects</a></nav>
+  </header>
+
+  <main class="viz-page">
+    <section class="viz-intro">
+      <h1>Limit curves of \(\mathrm{G}_2'\) representations</h1>
+      <div class="viz-lede">
+        <p>A cyclic Higgs bundle on the closed surface \(y^2 = x^5 - x\) gives a representation of its fundamental group in the split real form \(\mathrm{G}_2' \subset \mathrm{SO}(3,4)\). Its limit curve lies in the Einstein universe \(\mathrm{Ein}^{2,3}\), the space of null lines of \(\mathbb R^{3,4}\), which is double covered by \(S^2 \times S^3\). At \(t = 0\) the curve is a circle; as \(t\) grows it is deformed. Move \(t\) and watch both factors of the curve.</p>
+        <p class="paper-ref"><span class="abstract-label">Experimental</span>Numerical pictures from approximate holonomies; see the notes below.</p>
+      </div>
+    </section>
+
+    <section class="viz-stage" id="figure" aria-label="Interactive figure">
+      <figure class="viz-figure">
+        <div class="figure-bar">
+          <div class="segmented" id="view" role="radiogroup" aria-label="Factor of the double cover">
+            <button type="button" role="radio" aria-checked="true" data-value="s3">S³ factor</button>
+            <button type="button" role="radio" aria-checked="false" data-value="s2">S² factor</button>
+          </div>
+          <span class="figure-count" id="counter">No points yet</span>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="plot" tabindex="0" aria-label="Sampled limit curve. Drag or use the arrow keys to rotate."></canvas>
+          <p class="plot-legend" id="plotLegend"></p>
+          <div class="busy" id="busy" hidden><span class="busy-line"></span><span id="busyText" role="status">Loading…</span></div>
+        </div>
+        <figcaption id="caption"></figcaption>
+      </figure>
+
+      <aside class="viz-panel" aria-label="Controls">
+        <section class="panel-block">
+          <p class="panel-label">Higgs field</p>
+          <p class="formula-line">\(\alpha = \delta = t, \quad \deg B = 1\)</p>
+          <p class="a-value" id="tValue" aria-hidden="true"></p>
+          <div class="slider">
+            <input type="range" id="tSlider" min="0" max="1" step="0.001" value="0" aria-label="Value of t">
+            <div class="ticks" id="ticks" aria-hidden="true"></div>
+          </div>
+          <p class="panel-note">\(t = 0\): the curve is a circle, a single point of \(S^2\) times a great circle of \(S^3\). Slide to the right to deform it; the arrow keys also step through the values.</p>
+        </section>
+
+        <section class="panel-block" id="turnBlock">
+          <p class="panel-label">Rotation in four dimensions</p>
+          <input type="range" id="turn" min="-180" max="180" step="1" value="0" aria-label="Rotation of S³ before stereographic projection, in degrees">
+          <p class="panel-note">\(S^3\) is projected stereographically to \(\mathbb R^3\) from a point chosen away from all the curves (angle \(0\)); this slider turns \(S^3\) in a plane through that point. Scroll on the figure to zoom.</p>
+        </section>
+
+        <section class="panel-block">
+          <p class="panel-label">Displayed curve</p>
+          <dl class="rep-list">
+            <div><dt>Points</dt><dd id="repPoints">—</dd></div>
+            <div><dt>Change under refinement</dt><dd id="repChange">—</dd></div>
+            <div><dt>Relation error</dt><dd id="repRelation">—</dd></div>
+          </dl>
+          <p class="panel-note" id="repNote"></p>
+          <div class="actions"><button type="button" id="png">Save image</button></div>
+        </section>
+      </aside>
+    </section>
+
+    <section class="viz-notes">
+      <article class="text-panel">
+        <p class="eyebrow">What is drawn</p>
+        <h2>Attracting null lines</h2>
+        <p>The holonomy \(\rho\colon \pi_1 S \to \mathrm{G}_2'\) preserves a quadratic form of signature \((3,4)\); splitting \(\mathbb R^{3,4} = U \oplus U^\perp\) into a positive and a negative part, a null line \([u : w]\) gives the pair \((u/|u|, w/|w|) \in S^2 \times S^3\), up to a common sign. The words beginning with a finite word \(g\) give the limit points \(\xi(g\,\ell\, m\, m \cdots) = \rho(g\ell m)\, p_m\), where \(p_m\) is the attracting line of \(\rho(m)\); a piece of the curve whose points spread over more than \(0.3^\circ\) in either factor is refined with longer words.</p>
+        <p>The harmonic metrics (spectral solver) and holonomies were computed in advance, in Python. The change under refinement is the relative change of the generators between polynomial degrees 36 and 44 of the solver. The relation error \(\|\rho([a_1,b_1][a_2,b_2]) - I\|\) grows with the size of the generators, whose norms reach about \(2 \times 10^4\) at \(t = 0.7\). Larger values of \(t\) are left out: there, products of the matrices in double precision no longer stay on the null cone. Each picture is a finite sample from approximate holonomies, not a certified curve.</p>
+      </article>
+    </section>
+  </main>
+
+  <footer class="site-footer"><p>Colin Davalo · Turin, Italy</p><a href="#top">Back to top <span aria-hidden="true">↑</span></a></footer>
+  <script src="vendor/katex/katex.min.js"></script>
+  <script src="vendor/katex/auto-render.min.js"></script>
+  <script src="data/curves.js"></script>
+  <script src="draw.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
