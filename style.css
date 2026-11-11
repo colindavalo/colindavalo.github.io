@@ -154,7 +154,6 @@ img, svg { display: block; max-width: 100%; }
   .paper-card { grid-template-columns: 1fr; gap: 1.2rem; }
   .paper-visual { min-height: 0; aspect-ratio: 2.25 / 1; }
   .paper-visual svg { width: 86%; }
-  .paper-meta span:last-child { display: none; }
   .lower-grid, .gallery-grid { grid-template-columns: 1fr; }
   .gallery-card:first-child { grid-column: auto; }
   .gallery-card:first-child img, .gallery-card img { aspect-ratio: 16 / 10; }
