@@ -12,6 +12,15 @@ site root with NumPy, Pillow and matplotlib:
 python3 scripts/recolor_hitchin_surface.py pictures/hitchin-proj-labels.png pictures/hitchin-proj-labels-uniform.png 212 0.78
 ```
 
+The publication pages now use `pictures/hitchin-proj-labels-uniform-2.png`:
+the same image without the isolated pink segment (and its small circle) next
+to ξ, which matched no circle on the surface. Only pixels in that area change;
+the brown curve ξ and its point are protected. Rebuild it after the step above:
+
+```sh
+python3 scripts/remove_hitchin_extra_line.py pictures/hitchin-proj-labels-uniform.png pictures/hitchin-proj-labels-uniform-2.png
+```
+
 `pictures/barbot-limit-sphere.jpg` is a capture of Visualize Higgs's compact
 Barbot explorer on y² = x⁵ − x, spin O(p∞), A = 0.2, B = 0, saved level-7
 holonomies. It shows both antipodal lifts of 100,000 numerically sampled
