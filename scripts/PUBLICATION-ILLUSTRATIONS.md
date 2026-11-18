@@ -1,8 +1,16 @@
 # Publication illustrations
 
 `pictures/hitchin-proj-labels.png` is the author's supplied image
-`hitchin_proj_labels.png`, copied without modification. It illustrates
-*Projective Structures with (Quasi-)Hitchin Holonomy* on both publication pages.
+`hitchin_proj_labels.png`, copied without modification (kept, no longer linked).
+`pictures/hitchin-proj-labels-uniform.png` illustrates *Projective Structures
+with (Quasi-)Hitchin Holonomy* on both publication pages: the same image with
+the blue-violet gradient of the surface S replaced by a single blue (hue 212°),
+shading kept; every pixel outside the surface is unchanged. Rebuild it from the
+site root with NumPy, Pillow and matplotlib:
+
+```sh
+python3 scripts/recolor_hitchin_surface.py pictures/hitchin-proj-labels.png pictures/hitchin-proj-labels-uniform.png 212 0.78
+```
 
 `pictures/barbot-limit-sphere.jpg` is a capture of Visualize Higgs's compact
 Barbot explorer on y² = x⁵ − x, spin O(p∞), A = 0.2, B = 0, saved level-7
